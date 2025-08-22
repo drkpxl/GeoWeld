@@ -49,10 +49,6 @@ class ResortProcessor:
         
         resort_config = self.config[self.resort_name].copy()
         
-        # Apply default zone styling if not specified
-        if 'zone_styling' not in resort_config:
-            resort_config['zone_styling'] = DEFAULT_ZONE_STYLES.copy()
-        
         # Apply default tree config values
         tree_config = resort_config.get('tree_config', {})
         tree_config.setdefault('min_area_for_trees', SMALL_AREA_THRESHOLD)
@@ -349,7 +345,7 @@ class ResortProcessor:
     def process_boundary_features(self, boundaries_gdf: gpd.GeoDataFrame) -> List[Dict]:
         """Process boundary features for styling."""
         boundary_features = []
-        zone_styles = self.resort_config.get('zone_styling', DEFAULT_ZONE_STYLES)
+        zone_styles = DEFAULT_ZONE_STYLES
         
         for idx, row in boundaries_gdf.iterrows():
             zone_type = row.get('ZoneType', '')

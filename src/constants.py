@@ -49,7 +49,9 @@ DEFAULT_ZONE_STYLES = {
     "ski_area_boundary": {
         "stroke_color": "#000000",
         "stroke_opacity": 1.0,
-        "stroke_width": 3
+        "stroke_width": 3,
+        "fill_color": "#000000",
+        "fill_opacity": 0.1
     }
 }
 

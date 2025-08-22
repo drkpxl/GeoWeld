@@ -3,12 +3,7 @@
 
 stratton:
   name: "Stratton Mountain Resort"
-  center: [-72.907706, 43.101027]
-  zoom: 14
-  bounds:
-    southwest: [-72.925698, 43.088701]
-    northeast: [-72.889714, 43.113352]
-
+  
   data_files:
     boundaries: "data/stratton/boundaries.geojson"
     osm_features: "data/stratton/osm_features.geojson"
@@ -30,25 +25,3 @@ stratton:
 
     # Random seed for reproducible results
     random_seed: 42
-
-  # Zone styling properties (added to GeoJSON properties)
-  zone_styling:
-    slow_zone:
-      stroke_color: "#FFFF00"
-      stroke_opacity: 1.0
-      fill_color: "#FFFF00"
-      fill_opacity: 0.5
-    closed_area:
-      stroke_color: "#FF0000"
-      stroke_opacity: 1.0
-      fill_color: "#FF0000"
-      fill_opacity: 0.7
-    beginner_area:
-      stroke_color: "#FFFF00"
-      stroke_opacity: 1.0
-      fill_color: "#FFFF00"
-      fill_opacity: 0.4
-    ski_area_boundary:
-      stroke_color: "#000000"
-      stroke_opacity: 1.0
-      stroke_width: 3
