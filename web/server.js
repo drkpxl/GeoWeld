@@ -67,9 +67,10 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Move file to resort directory
+    // Copy file to resort directory (can't use rename across Docker volumes)
     const targetPath = path.join(resortDir, 'boundaries.geojson');
-    await fs.rename(req.file.path, targetPath);
+    await fs.copyFile(req.file.path, targetPath);
+    await fs.unlink(req.file.path);
 
     // Don't create placeholder - let Python script fetch OSM data
 
