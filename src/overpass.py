@@ -223,6 +223,7 @@ def fetch_osm_features(resort_name: str, bounds: Tuple[float, float, float, floa
 def get_bounds_from_boundaries(boundaries_path: Path) -> Tuple[float, float, float, float]:
     """
     Extract bounding box from boundaries GeoJSON file.
+    Uses feature_boundary for fetching OSM data to ensure we get all features.
     
     Args:
         boundaries_path: Path to boundaries GeoJSON file
@@ -233,16 +234,24 @@ def get_bounds_from_boundaries(boundaries_path: Path) -> Tuple[float, float, flo
     with open(boundaries_path) as f:
         data = json.load(f)
     
-    # Find ski_area_boundary feature
-    ski_area = None
+    # Find feature_boundary - this is the boundary for OSM data fetching
+    feature_boundary = None
     for feature in data['features']:
-        if feature.get('properties', {}).get('ZoneType') == 'ski_area_boundary':
-            ski_area = feature
+        if feature.get('properties', {}).get('ZoneType') == 'feature_boundary':
+            feature_boundary = feature
             break
     
-    if not ski_area:
+    if not feature_boundary:
+        # Fall back to ski_area_boundary if no feature_boundary
+        logger.warning("No feature_boundary found, falling back to ski_area_boundary")
+        for feature in data['features']:
+            if feature.get('properties', {}).get('ZoneType') == 'ski_area_boundary':
+                feature_boundary = feature
+                break
+    
+    if not feature_boundary:
         # Fall back to union of all features
-        logger.warning("No ski_area_boundary found, using all features")
+        logger.warning("No feature_boundary or ski_area_boundary found, using all features")
         all_bounds = []
         for feature in data['features']:
             geom = shape(feature['geometry'])
@@ -255,7 +264,8 @@ def get_bounds_from_boundaries(boundaries_path: Path) -> Tuple[float, float, flo
             max_lat = max(b[3] for b in all_bounds)
             return (min_lon, min_lat, max_lon, max_lat)
     else:
-        geom = shape(ski_area['geometry'])
+        geom = shape(feature_boundary['geometry'])
+        logger.info(f"Using feature_boundary for OSM data fetching: {geom.bounds}")
         return geom.bounds
     
     raise ValueError("Could not extract bounds from boundaries file")

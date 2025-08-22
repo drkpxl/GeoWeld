@@ -104,6 +104,7 @@ class ResortProcessor:
             raise ValueError(error_msg)
         
         self.feature_boundary = feature_boundary_features.geometry.union_all()
+        print(f"Using feature_boundary for clipping OSM features (forests/rocks)")
         
         # Check if OSM file exists and has content, fetch from Overpass if not
         features_file = self.resort_config['data_files']['osm_features']
@@ -139,6 +140,7 @@ class ResortProcessor:
             raise ValueError("Feature boundary not loaded")
         
         clipped_features = []
+        initial_count = len(gdf)
         
         for idx, row in gdf.iterrows():
             try:
@@ -152,6 +154,8 @@ class ResortProcessor:
             except Exception as e:
                 print(f"Warning: Failed to clip feature {idx}: {e}")
                 continue
+        
+        print(f"  Clipped {initial_count} features to feature_boundary, kept {len(clipped_features)}")
         
         if not clipped_features:
             return gpd.GeoDataFrame()
