@@ -52,6 +52,13 @@ DEFAULT_ZONE_STYLES = {
         "stroke_width": 3,
         "fill_color": "#000000",
         "fill_opacity": 0.1
+    },
+    "feature_boundary": {
+        "stroke_color": "#008000",
+        "stroke_opacity": 0.8,
+        "stroke_width": 2,
+        "fill_color": "#008000",
+        "fill_opacity": 0.05
     }
 }
 

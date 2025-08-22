@@ -30,7 +30,7 @@ class ResortProcessor:
         self.resort_name = resort_name
         self.config = self._load_config(config_file)
         self.resort_config = self._get_resort_config()
-        self.ski_area_boundary = None
+        self.feature_boundary = None
         
     def _load_config(self, config_file: str) -> Dict[str, Any]:
         """Load resort configuration from YAML file."""
@@ -73,12 +73,12 @@ class ResortProcessor:
         
         boundaries_gdf = gpd.read_file(boundaries_file)
         
-        # Extract ski area boundary
-        ski_boundary_features = boundaries_gdf[boundaries_gdf['ZoneType'] == 'ski_area_boundary']
-        if ski_boundary_features.empty:
-            raise ValueError("No ski_area_boundary found in boundary file")
+        # Extract feature boundary for tree/rock generation
+        feature_boundary_features = boundaries_gdf[boundaries_gdf['ZoneType'] == 'feature_boundary']
+        if feature_boundary_features.empty:
+            raise ValueError("No feature_boundary found in boundary file")
         
-        self.ski_area_boundary = ski_boundary_features.geometry.union_all()
+        self.feature_boundary = feature_boundary_features.geometry.union_all()
         
         # Check if OSM file exists, fetch from Overpass if not
         features_file = self.resort_config['data_files']['osm_features']
@@ -94,15 +94,15 @@ class ResortProcessor:
         return boundaries_gdf, features_gdf
     
     def clip_to_boundary(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        """Clip all features to the ski area boundary."""
-        if self.ski_area_boundary is None:
-            raise ValueError("Ski area boundary not loaded")
+        """Clip all features to the feature boundary."""
+        if self.feature_boundary is None:
+            raise ValueError("Feature boundary not loaded")
         
         clipped_features = []
         
         for idx, row in gdf.iterrows():
             try:
-                clipped_geom = row.geometry.intersection(self.ski_area_boundary)
+                clipped_geom = row.geometry.intersection(self.feature_boundary)
                 
                 # Only keep non-empty geometries
                 if not clipped_geom.is_empty and clipped_geom.area > 0:
@@ -336,6 +336,7 @@ class ResortProcessor:
             'slow_zone': 'zone:slow',
             'closed_area': 'zone:closed',
             'ski_area_boundary': 'boundary:ski',
+            'feature_boundary': 'boundary:feature',  # Boundary for tree/rock generation
             'beginner_area': 'zone:beginner',  # Not in spec but handling it
             # Add support for first-tracks if it appears in data
             'first_tracks': 'boundary:first-tracks'
