@@ -19,9 +19,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy package.json for Node dependencies
-COPY web/package*.json ./web/
+COPY web/package.json ./web/
 WORKDIR /app/web
-RUN npm ci --only=production
+RUN npm install --production
 
 # Copy application code
 WORKDIR /app
