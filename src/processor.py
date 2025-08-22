@@ -221,31 +221,39 @@ class ResortProcessor:
             return 'tree:mixed'
     
     def generate_tree_points(self, forest_gdf: gpd.GeoDataFrame) -> List[Dict]:
-        """Generate individual tree points for forest polygons."""
+        """Generate individual tree points for forest polygons within the feature boundary."""
         tree_features = []
-        
+
         for idx, row in forest_gdf.iterrows():
             geom = row.geometry
-            
-            # Calculate total area for the entire geometry
+
+            # Ensure geometry is constrained to the feature boundary
+            if self.feature_boundary is not None:
+                geom = geom.intersection(self.feature_boundary)
+                if geom.is_empty:
+                    continue
+
+            # Calculate total area for the (potentially clipped) geometry
             temp_gdf = gpd.GeoDataFrame([1], geometry=[geom], crs='EPSG:4326')
             temp_gdf_proj = temp_gdf.to_crs('EPSG:3857')  # Web Mercator
             total_area_sq_meters = temp_gdf_proj.geometry.area.iloc[0]
-            
+
             # Calculate total tree count for this feature
             total_tree_count = self.calculate_tree_count(total_area_sq_meters)
-            
+
             if total_tree_count > 0:
-                # Handle both Polygon and MultiPolygon
+                # Handle both Polygon and MultiPolygon, skip invalid geometries
                 if isinstance(geom, MultiPolygon):
                     polygons = list(geom.geoms)
-                else:
+                elif isinstance(geom, Polygon):
                     polygons = [geom]
-                
+                else:
+                    continue
+
                 # Distribute trees across polygons proportionally by area
                 polygon_areas = []
                 valid_polygons = []
-                
+
                 for polygon in polygons:
                     if isinstance(polygon, Polygon):
                         temp_poly_gdf = gpd.GeoDataFrame([1], geometry=[polygon], crs='EPSG:4326')
@@ -253,19 +261,19 @@ class ResortProcessor:
                         poly_area = temp_poly_proj.geometry.area.iloc[0]
                         polygon_areas.append(poly_area)
                         valid_polygons.append(polygon)
-                
+
                 if not valid_polygons:
                     continue
-                
+
                 # Distribute trees proportionally
                 total_polygon_area = sum(polygon_areas)
                 trees_placed = 0
-                
+
                 # Map leaf_type to standardized tree type
                 leaf_type = row.get('leaf_type')
                 leaf_cycle = row.get('leaf_cycle')
                 tree_type = self._map_tree_type(leaf_type, leaf_cycle)
-                
+
                 for i, (polygon, poly_area) in enumerate(zip(valid_polygons, polygon_areas)):
                     # Calculate trees for this polygon
                     if i == len(valid_polygons) - 1:  # Last polygon gets remaining trees
@@ -273,11 +281,11 @@ class ResortProcessor:
                     else:
                         proportion = poly_area / total_polygon_area
                         polygon_tree_count = int(total_tree_count * proportion)
-                    
+
                     if polygon_tree_count > 0:
                         points = self.generate_random_points_in_polygon(polygon, polygon_tree_count)
                         trees_placed += len(points)
-                        
+
                         for point in points:
                             tree_feature = {
                                 "type": "Feature",
@@ -292,7 +300,7 @@ class ResortProcessor:
                                 }
                             }
                             tree_features.append(tree_feature)
-        
+
         return tree_features
     
     def process_forest_features(self, features_gdf: gpd.GeoDataFrame) -> Tuple[List[Dict], List[Dict]]:
