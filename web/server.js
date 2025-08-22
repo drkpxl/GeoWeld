@@ -17,11 +17,11 @@ const ROOT_DIR = path.dirname(__dirname);
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Configure multer for file uploads
 const upload = multer({ 
-  dest: 'uploads/',
+  dest: path.join(__dirname, 'uploads'),
   fileFilter: (req, file, cb) => {
     if (path.extname(file.originalname).toLowerCase() === '.geojson') {
       cb(null, true);
