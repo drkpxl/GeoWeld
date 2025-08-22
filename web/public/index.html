@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoWeld - Resort Processor</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>⛰️</text></svg>">
+
+  <!-- Tailwind CSS (Note: Using CDN for development. For production, use PostCSS or CLI) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React -->
+  <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+
+  <!-- Mapbox GL JS -->
+  <link href='https://api.mapbox.com/mapbox-gl-js/v3.14.0/mapbox-gl.css' rel='stylesheet' />
+  <script src='https://api.mapbox.com/mapbox-gl-js/v3.14.0/mapbox-gl.js'></script>
+
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    .mapboxgl-popup {
+      max-width: 200px;
+    }
+
+    .animate-pulse-slow {
+      animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50">
+  <div id="root"></div>
+  <script type="text/babel" src="app.js"></script>
+</body>
+
+</html>

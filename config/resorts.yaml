@@ -1,27 +1,45 @@
-# Resort Configuration for GeoJSON Processing
-# Each resort defines data paths and processing parameters
-
 stratton:
-  name: "Stratton Mountain Resort"
-  
+  name: Stratton Mountain Resort
   data_files:
-    boundaries: "data/stratton/boundaries.geojson"
-    osm_features: "data/stratton/osm_features.geojson"
-
+    boundaries: data/stratton/boundaries.geojson
+    osm_features: data/stratton/osm_features.geojson
   tree_config:
-    # Area thresholds for tree generation
-    min_area_for_trees: 5000 # sq meters - minimum polygon area to generate trees
-    small_area_threshold: 25000 # sq meters (2.5 hectares)
-    medium_area_threshold: 100000 # sq meters (10 hectares)
-
-    # Density settings (trees per hectare)
-    trees_per_small_hectare: 2 # for small areas
-    trees_per_medium_hectare: 4 # for medium areas
-    trees_per_large_hectare: 15 # for large areas
-
-    # Limits
-    max_trees_per_polygon: 40 # maximum trees per individual polygon
-    min_trees_per_polygon: 1 # minimum trees per polygon
-
-    # Random seed for reproducible results
+    min_area_for_trees: 5000
+    small_area_threshold: 25000
+    medium_area_threshold: 100000
+    trees_per_small_hectare: 2
+    trees_per_medium_hectare: 4
+    trees_per_large_hectare: 15
+    max_trees_per_polygon: 40
+    min_trees_per_polygon: 1
+    random_seed: 42
+mammoth:
+  name: Mammoth Resort
+  data_files:
+    boundaries: data/mammoth/boundaries.geojson
+    osm_features: data/mammoth/osm_features.geojson
+  tree_config:
+    min_area_for_trees: 5000
+    small_area_threshold: 25000
+    medium_area_threshold: 100000
+    trees_per_small_hectare: 2
+    trees_per_medium_hectare: 4
+    trees_per_large_hectare: 15
+    max_trees_per_polygon: 40
+    min_trees_per_polygon: 1
+    random_seed: 42
+stratton2:
+  name: Stratton2 Resort
+  data_files:
+    boundaries: data/stratton2/boundaries.geojson
+    osm_features: data/stratton2/osm_features.geojson
+  tree_config:
+    min_area_for_trees: 5000
+    small_area_threshold: 25000
+    medium_area_threshold: 100000
+    trees_per_small_hectare: 2
+    trees_per_medium_hectare: 4
+    trees_per_large_hectare: 15
+    max_trees_per_polygon: 40
+    min_trees_per_polygon: 1
     random_seed: 42

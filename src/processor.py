@@ -9,6 +9,7 @@ import yaml
 from typing import List, Dict, Tuple, Optional, Any
 from datetime import datetime
 from pathlib import Path
+import pandas as pd
 import geopandas as gpd
 import numpy as np
 from shapely.geometry import Point, Polygon, MultiPolygon
@@ -73,20 +74,59 @@ class ResortProcessor:
         
         boundaries_gdf = gpd.read_file(boundaries_file)
         
+        # Normalize ZoneType values (handle case and spacing variations)
+        boundaries_gdf['ZoneType'] = boundaries_gdf['ZoneType'].str.lower().str.replace(' ', '_')
+        
+        # Check what zone types are present
+        zone_types = boundaries_gdf['ZoneType'].unique()
+        print(f"Found zone types: {', '.join(zone_types)}")
+        
+        # Check for required ski_area_boundary
+        if 'ski_area_boundary' not in zone_types:
+            error_msg = (
+                f"\n⚠️  Warning: No 'ski_area_boundary' zone found\n"
+                f"   Found zones: {', '.join(zone_types)}\n"
+                f"   The ski_area_boundary defines the overall resort area.\n"
+            )
+            print(error_msg)
+        
         # Extract feature boundary for tree/rock generation
         feature_boundary_features = boundaries_gdf[boundaries_gdf['ZoneType'] == 'feature_boundary']
         if feature_boundary_features.empty:
-            raise ValueError("No feature_boundary found in boundary file")
+            # Provide helpful error message
+            error_msg = (
+                f"\n❌ Missing required 'feature_boundary' zone in boundaries.geojson\n"
+                f"   Found zones: {', '.join(zone_types)}\n"
+                f"   Required: At least one feature with ZoneType='feature_boundary'\n"
+                f"   This boundary defines where trees and rocks can be placed.\n"
+                f"   Please add a feature_boundary zone to your boundaries file."
+            )
+            raise ValueError(error_msg)
         
         self.feature_boundary = feature_boundary_features.geometry.union_all()
         
-        # Check if OSM file exists, fetch from Overpass if not
+        # Check if OSM file exists and has content, fetch from Overpass if not
         features_file = self.resort_config['data_files']['osm_features']
+        should_fetch = False
+        
         if not os.path.exists(features_file):
+            should_fetch = True
+        else:
+            # Check if file is empty or just has empty FeatureCollection
+            try:
+                temp_gdf = gpd.read_file(features_file)
+                if temp_gdf.empty:
+                    print(f"OSM features file is empty, fetching from Overpass API...")
+                    should_fetch = True
+            except:
+                should_fetch = True
+        
+        if should_fetch:
             # Get bounds from boundaries file
             bounds = get_bounds_from_boundaries(Path(boundaries_file))
             
             # Fetch OSM features (will be saved to the expected location)
+            print(f"Fetching OSM data for {self.resort_name}...")
             features_file = fetch_osm_features(self.resort_name, bounds)
         
         features_gdf = gpd.read_file(features_file)
@@ -255,8 +295,19 @@ class ResortProcessor:
         """Process forest features and generate tree points."""
         forest_features = []
         
-        # Filter for forest features
-        forest_mask = (features_gdf['landuse'] == 'forest') | (features_gdf['natural'] == 'wood')
+        # Check if the dataframe is empty
+        if features_gdf.empty:
+            print("No OSM features found, skipping forest processing")
+            return [], []
+        
+        # Filter for forest features (check if columns exist first)
+        forest_mask = pd.Series([False] * len(features_gdf), index=features_gdf.index)
+        
+        if 'landuse' in features_gdf.columns:
+            forest_mask |= (features_gdf['landuse'] == 'forest')
+        if 'natural' in features_gdf.columns:
+            forest_mask |= (features_gdf['natural'] == 'wood')
+        
         forest_gdf = features_gdf[forest_mask].copy()
         
         if forest_gdf.empty:
