@@ -158,7 +158,7 @@ $RECYCLE.BIN/
 
 # Project specific
 /output/
-/data/*/osm_features_*.geojson
+/data/*
 *.log
 *.tmp
 .cache/
