@@ -8,6 +8,7 @@ import os
 import yaml
 from typing import List, Dict, Tuple, Optional, Any
 from datetime import datetime
+from pathlib import Path
 import geopandas as gpd
 import numpy as np
 from shapely.geometry import Point, Polygon, MultiPolygon
@@ -20,6 +21,7 @@ from .constants import (
     HECTARE_TO_SQ_METERS, DEFAULT_RANDOM_SEED, TIMESTAMP_FORMAT,
     DEFAULT_ZONE_STYLES
 )
+from .overpass import fetch_osm_features, get_bounds_from_boundaries
 
 
 class ResortProcessor:
@@ -67,17 +69,13 @@ class ResortProcessor:
         return resort_config
     
     def load_data(self) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
-        """Load boundary and features data."""
+        """Load boundary and features data, fetching from Overpass if needed."""
         boundaries_file = self.resort_config['data_files']['boundaries']
-        features_file = self.resort_config['data_files']['osm_features']
         
         if not os.path.exists(boundaries_file):
             raise FileNotFoundError(f"Boundary file not found: {boundaries_file}")
-        if not os.path.exists(features_file):
-            raise FileNotFoundError(f"Features file not found: {features_file}")
         
         boundaries_gdf = gpd.read_file(boundaries_file)
-        features_gdf = gpd.read_file(features_file)
         
         # Extract ski area boundary
         ski_boundary_features = boundaries_gdf[boundaries_gdf['ZoneType'] == 'ski_area_boundary']
@@ -85,6 +83,17 @@ class ResortProcessor:
             raise ValueError("No ski_area_boundary found in boundary file")
         
         self.ski_area_boundary = ski_boundary_features.geometry.union_all()
+        
+        # Check if OSM file exists, fetch from Overpass if not
+        features_file = self.resort_config['data_files']['osm_features']
+        if not os.path.exists(features_file):
+            # Get bounds from boundaries file
+            bounds = get_bounds_from_boundaries(Path(boundaries_file))
+            
+            # Fetch OSM features (will be saved to the expected location)
+            features_file = fetch_osm_features(self.resort_name, bounds)
+        
+        features_gdf = gpd.read_file(features_file)
         
         return boundaries_gdf, features_gdf
     
