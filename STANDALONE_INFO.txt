@@ -1,0 +1,37 @@
+STANDALONE GEOJSON PROCESSOR
+============================
+
+This is a self-contained, portable GeoJSON processing tool.
+
+
+TO USE IN A NEW PROJECT:
+------------------------
+1. Copy this entire 'geojson-processor-standalone' folder to your new project directory
+2. Install dependencies: pip install -r requirements.txt
+3. Add your resort data to data/resort_name/ folder
+4. Configure resorts in config/resorts.yaml
+5. Run: python scripts/process_resort.py --resort your_resort_name
+
+WHAT IT DOES:
+-------------
+- Clips OSM features to ski resort boundaries
+- Generates individual tree points within forest polygons
+- Uses tiered density algorithm (small/medium/large areas)
+- Processes boundary zones with styling properties
+- Outputs combined GeoJSON with all features
+
+
+FILES INCLUDED:
+---------------
+- README.md - Usage instructions
+- requirements.txt - Python dependencies (minimal)
+- config/resorts.yaml - Resort configurations
+- src/processor.py - Core GeoJSON processing logic
+- src/constants.py - Processing constants
+- scripts/process_resort.py - Single resort processing
+- scripts/batch_process.py - Batch processing
+- data/ - Input data directory (add your GeoJSON files here)
+- output/ - Generated output directory
+
+This tool is completely independent and can be used in any project that needs
+to process ski resort boundary and OSM feature data into combined GeoJSON files.

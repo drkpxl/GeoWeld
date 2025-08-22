@@ -15,19 +15,19 @@ stratton:
 
   tree_config:
     # Area thresholds for tree generation
-    min_area_for_trees: 5000         # sq meters - minimum polygon area to generate trees
-    small_area_threshold: 25000      # sq meters (2.5 hectares)
-    medium_area_threshold: 100000    # sq meters (10 hectares)
+    min_area_for_trees: 5000 # sq meters - minimum polygon area to generate trees
+    small_area_threshold: 25000 # sq meters (2.5 hectares)
+    medium_area_threshold: 100000 # sq meters (10 hectares)
 
     # Density settings (trees per hectare)
-    trees_per_small_hectare: 2       # for small areas
-    trees_per_medium_hectare: 4      # for medium areas
-    trees_per_large_hectare: 15      # for large areas
-    
+    trees_per_small_hectare: 2 # for small areas
+    trees_per_medium_hectare: 4 # for medium areas
+    trees_per_large_hectare: 15 # for large areas
+
     # Limits
-    max_trees_per_polygon: 40        # maximum trees per individual polygon
-    min_trees_per_polygon: 1         # minimum trees per polygon
-    
+    max_trees_per_polygon: 40 # maximum trees per individual polygon
+    min_trees_per_polygon: 1 # minimum trees per polygon
+
     # Random seed for reproducible results
     random_seed: 42
 
@@ -69,54 +69,10 @@ mammoth:
     min_area_for_trees: 5000
     small_area_threshold: 25000
     medium_area_threshold: 100000
-    trees_per_small_hectare: 1       # Sparser for California mountains
+    trees_per_small_hectare: 1 # Sparser for California mountains
     trees_per_medium_hectare: 3
     trees_per_large_hectare: 10
     max_trees_per_polygon: 35
-    min_trees_per_polygon: 1
-    random_seed: 42
-
-  zone_styling:
-    slow_zone:
-      stroke_color: "#FFFF00"
-      stroke_opacity: 1.0
-      fill_color: "#FFFF00"
-      fill_opacity: 0.5
-    closed_area:
-      stroke_color: "#FF0000"
-      stroke_opacity: 1.0
-      fill_color: "#FF0000"
-      fill_opacity: 0.7
-    beginner_area:
-      stroke_color: "#FFFF00"
-      stroke_opacity: 1.0
-      fill_color: "#FFFF00"
-      fill_opacity: 0.4
-    ski_area_boundary:
-      stroke_color: "#000000"
-      stroke_opacity: 1.0
-      stroke_width: 3
-
-steamboat:
-  name: "Steamboat Ski Resort"
-  center: [-106.804834, 40.457065]
-  zoom: 13
-  bounds:
-    southwest: [-106.825, 40.442]
-    northeast: [-106.785, 40.472]
-
-  data_files:
-    boundaries: "data/steamboat/SB_boundaries_2025.geojson"
-    osm_features: "data/steamboat/SteamboatForestRocks.geojson"
-
-  tree_config:
-    min_area_for_trees: 5000
-    small_area_threshold: 25000
-    medium_area_threshold: 100000
-    trees_per_small_hectare: 2
-    trees_per_medium_hectare: 5
-    trees_per_large_hectare: 18      # Denser for Colorado forests
-    max_trees_per_polygon: 45
     min_trees_per_polygon: 1
     random_seed: 42
 

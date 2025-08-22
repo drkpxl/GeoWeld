@@ -166,6 +166,7 @@ $RECYCLE.BIN/
 # Claude configuration (keep local settings)
 .claude/settings.local.json
 CLAUDE.md
+.claude/*
 
 # Temporary files
 *.swp
