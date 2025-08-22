@@ -1,0 +1,68 @@
+# Virtual environment - Claude doesn't need to analyze these
+venv/
+env/
+.venv/
+.env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Output data - these are generated files
+output/
+
+# Large data files that Claude doesn't need to read
+data/*/*.geojson
+!data/*/boundaries.geojson
+# Keep boundary files readable for context
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Documentation builds
+docs/_build/
+site/
+
+# Test coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.backup
+*.old
+.cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Git
+.git/
+
+# Node modules (if any JavaScript tools are added later)
+node_modules/
+
+# Claude's own configuration should be readable
+!.claude/
+!.claude/*.md
+# But exclude local settings
+.claude/settings.local.json
