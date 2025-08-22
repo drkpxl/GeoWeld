@@ -234,38 +234,46 @@ def get_bounds_from_boundaries(boundaries_path: Path) -> Tuple[float, float, flo
     with open(boundaries_path) as f:
         data = json.load(f)
     
-    # Find feature_boundary - this is the boundary for OSM data fetching
-    feature_boundary = None
-    for feature in data['features']:
-        if feature.get('properties', {}).get('ZoneType') == 'feature_boundary':
-            feature_boundary = feature
-            break
-    
-    if not feature_boundary:
-        # Fall back to ski_area_boundary if no feature_boundary
-        logger.warning("No feature_boundary found, falling back to ski_area_boundary")
-        for feature in data['features']:
-            if feature.get('properties', {}).get('ZoneType') == 'ski_area_boundary':
-                feature_boundary = feature
-                break
-    
-    if not feature_boundary:
-        # Fall back to union of all features
-        logger.warning("No feature_boundary or ski_area_boundary found, using all features")
-        all_bounds = []
-        for feature in data['features']:
-            geom = shape(feature['geometry'])
-            all_bounds.append(geom.bounds)
-        
-        if all_bounds:
-            min_lon = min(b[0] for b in all_bounds)
-            min_lat = min(b[1] for b in all_bounds)
-            max_lon = max(b[2] for b in all_bounds)
-            max_lat = max(b[3] for b in all_bounds)
-            return (min_lon, min_lat, max_lon, max_lat)
-    else:
-        geom = shape(feature_boundary['geometry'])
-        logger.info(f"Using feature_boundary for OSM data fetching: {geom.bounds}")
-        return geom.bounds
-    
+    def _normalize(zone: str) -> str:
+        """Normalize ZoneType values for comparison."""
+        return zone.lower().replace(" ", "_")
+
+    # First try to find feature_boundary polygons
+    feature_geom = None
+    for feature in data["features"]:
+        zone_type = _normalize(feature.get("properties", {}).get("ZoneType", ""))
+        if zone_type == "feature_boundary":
+            geom = shape(feature["geometry"])
+            feature_geom = geom if feature_geom is None else feature_geom.union(geom)
+
+    if feature_geom is not None:
+        logger.info(f"Using feature_boundary for OSM data fetching: {feature_geom.bounds}")
+        return feature_geom.bounds
+
+    # Fall back to ski_area_boundary if no feature_boundary was found
+    logger.warning("No feature_boundary found, falling back to ski_area_boundary")
+    ski_geom = None
+    for feature in data["features"]:
+        zone_type = _normalize(feature.get("properties", {}).get("ZoneType", ""))
+        if zone_type == "ski_area_boundary":
+            geom = shape(feature["geometry"])
+            ski_geom = geom if ski_geom is None else ski_geom.union(geom)
+
+    if ski_geom is not None:
+        return ski_geom.bounds
+
+    # Fall back to union of all features as last resort
+    logger.warning("No feature_boundary or ski_area_boundary found, using all features")
+    all_bounds = []
+    for feature in data["features"]:
+        geom = shape(feature["geometry"])
+        all_bounds.append(geom.bounds)
+
+    if all_bounds:
+        min_lon = min(b[0] for b in all_bounds)
+        min_lat = min(b[1] for b in all_bounds)
+        max_lon = max(b[2] for b in all_bounds)
+        max_lat = max(b[3] for b in all_bounds)
+        return (min_lon, min_lat, max_lon, max_lat)
+
     raise ValueError("Could not extract bounds from boundaries file")
