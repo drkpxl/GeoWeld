@@ -264,24 +264,32 @@ function App() {
           },
         });
 
-        // Forest polygons
+        // Forest polygons (polygons with trees property)
         map.current.addLayer({
           id: "forests",
           type: "fill",
           source: "resort-data",
-          filter: ["==", ["get", "type"], "forest"],
+          filter: [
+            "all",
+            ["==", ["get", "trees"], true],
+            ["==", ["geometry-type"], "Polygon"]
+          ],
           paint: {
             "fill-color": "rgba(46, 125, 50, 0.4)",
             "fill-outline-color": "#2E7D32",
           },
         });
 
-        // Individual trees
+        // Individual trees (points)
         map.current.addLayer({
           id: "trees",
           type: "circle",
           source: "resort-data",
-          filter: ["==", ["get", "type"], "tree:mixed"],
+          filter: [
+            "all",
+            ["==", ["get", "type"], "tree:mixed"],
+            ["==", ["geometry-type"], "Point"]
+          ],
           paint: {
             "circle-radius": 3,
             "circle-color": "#1B5E20",
