@@ -157,8 +157,9 @@ $RECYCLE.BIN/
 *.lnk
 
 # Project specific
+# do not commit geojsons to src control
 /output/
-/data/*
+/data/* 
 *.log
 *.tmp
 .cache/
