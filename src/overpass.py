@@ -63,7 +63,7 @@ class OverpassClient:
                     raise
     
     def _build_query(self, bounds: Tuple[float, float, float, float]) -> str:
-        """Build Overpass QL query for forest and rock features."""
+        """Build Overpass QL query for forest, rock, and tree features."""
         min_lon, min_lat, max_lon, max_lat = bounds
         
         query = f"""
@@ -88,6 +88,9 @@ class OverpassClient:
   relation["natural"="scree"]({min_lat},{min_lon},{max_lat},{max_lon});
   relation["natural"="stone"]({min_lat},{min_lon},{max_lat},{max_lon});
   relation["landuse"="quarry"]({min_lat},{min_lon},{max_lat},{max_lon});
+  
+  // Tree nodes
+  node["natural"="tree"]({min_lat},{min_lon},{max_lat},{max_lon});
 );
 out geom;
 """
@@ -98,7 +101,13 @@ out geom;
         features = []
         
         for element in overpass_data.get('elements', []):
-            if 'geometry' not in element:
+            # Check if element has geometry data (ways/relations) or is a node with lat/lon
+            if element['type'] == 'node':
+                # Nodes have lat/lon directly, not in a geometry field
+                if 'lat' not in element or 'lon' not in element:
+                    continue
+            elif 'geometry' not in element:
+                # Ways and relations need geometry field
                 continue
             
             # Convert Overpass geometry to GeoJSON geometry
@@ -130,7 +139,15 @@ out geom;
     
     def _convert_geometry(self, element: Dict) -> Optional[Dict]:
         """Convert Overpass element geometry to GeoJSON geometry."""
-        if element['type'] == 'way':
+        if element['type'] == 'node':
+            # Handle point geometries for tree nodes
+            if 'lat' in element and 'lon' in element:
+                return {
+                    'type': 'Point',
+                    'coordinates': [element['lon'], element['lat']]
+                }
+        
+        elif element['type'] == 'way':
             coords = [[node['lon'], node['lat']] for node in element['geometry']]
             
             # Check if it's a closed way (polygon)

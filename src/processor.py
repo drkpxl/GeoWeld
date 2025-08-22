@@ -220,6 +220,60 @@ class ResortProcessor:
             # Default fallback when leaf_type is not defined
             return 'tree:mixed'
     
+    def process_osm_tree_nodes(self, features_gdf: gpd.GeoDataFrame) -> List[Dict]:
+        """Process OSM tree nodes (actual tree points from OSM data)."""
+        tree_features = []
+        
+        # Check if the dataframe is empty
+        if features_gdf.empty:
+            return []
+        
+        # Filter for tree nodes (check if columns exist first)
+        tree_mask = pd.Series([False] * len(features_gdf), index=features_gdf.index)
+        
+        if 'natural' in features_gdf.columns:
+            tree_mask = (features_gdf['natural'] == 'tree')
+        
+        # Also check if geometry is Point type
+        if any(tree_mask):
+            tree_mask &= features_gdf.geometry.geom_type == 'Point'
+        
+        tree_gdf = features_gdf[tree_mask].copy()
+        
+        if tree_gdf.empty:
+            return []
+        
+        # Process each tree node
+        for idx, row in tree_gdf.iterrows():
+            point = row.geometry
+            
+            # Clip to feature boundary
+            if self.feature_boundary is not None:
+                if not self.feature_boundary.contains(point):
+                    continue
+            
+            # Map leaf_type to standardized tree type
+            leaf_type = row.get('leaf_type')
+            leaf_cycle = row.get('leaf_cycle')
+            tree_type = self._map_tree_type(leaf_type, leaf_cycle)
+            
+            tree_feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [point.x, point.y]
+                },
+                "properties": {
+                    "trees": True,
+                    "type": tree_type,
+                    "source": "osm",
+                    "@id": row.get('@id', '')
+                }
+            }
+            tree_features.append(tree_feature)
+        
+        return tree_features
+    
     def generate_tree_points(self, forest_gdf: gpd.GeoDataFrame) -> List[Dict]:
         """Generate individual tree points for forest polygons within the feature boundary."""
         tree_features = []
@@ -296,6 +350,7 @@ class ResortProcessor:
                                 "properties": {
                                     "trees": True,
                                     "type": tree_type,
+                                    "source": "generated",
                                     "source_polygon_id": str(idx)
                                 }
                             }
@@ -459,11 +514,13 @@ class ResortProcessor:
         
         # Process different feature types
         boundary_features = self.process_boundary_features(boundaries_gdf)
-        forest_features, tree_points = self.process_forest_features(features_gdf)
+        forest_features, generated_tree_points = self.process_forest_features(features_gdf)
+        osm_tree_points = self.process_osm_tree_nodes(features_gdf)
         rock_features = self.process_rock_features(features_gdf)
         
-        # Combine all features
-        all_features = boundary_features + forest_features + tree_points + rock_features
+        # Combine all features (OSM trees + generated trees)
+        all_tree_points = osm_tree_points + generated_tree_points
+        all_features = boundary_features + forest_features + all_tree_points + rock_features
         
         output_geojson = {
             "type": "FeatureCollection",
@@ -475,7 +532,9 @@ class ResortProcessor:
                 "total_features": len(all_features),
                 "boundary_features": len(boundary_features),
                 "forest_features": len(forest_features),
-                "tree_points": len(tree_points),
+                "tree_points_total": len(all_tree_points),
+                "tree_points_osm": len(osm_tree_points),
+                "tree_points_generated": len(generated_tree_points),
                 "rock_features": len(rock_features),
                 "tree_config": self.resort_config['tree_config'],
                 "center": self.resort_config.get('center'),

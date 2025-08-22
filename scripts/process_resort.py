@@ -140,7 +140,14 @@ Examples:
             print(f"    Total features: {metadata['total_features']:,}")
             print(f"    - Boundary features: {metadata['boundary_features']}")
             print(f"    - Forest areas: {metadata['forest_features']}")
-            print(f"    - Individual trees: {metadata['tree_points']:,}")
+            # Handle both old and new metadata formats for backward compatibility
+            if 'tree_points_total' in metadata:
+                print(f"    - Individual trees: {metadata['tree_points_total']:,}")
+                if metadata.get('tree_points_osm', 0) > 0:
+                    print(f"      • OSM trees: {metadata['tree_points_osm']:,}")
+                print(f"      • Generated trees: {metadata['tree_points_generated']:,}")
+            elif 'tree_points' in metadata:
+                print(f"    - Individual trees: {metadata['tree_points']:,}")
             print(f"    - Rock features: {metadata['rock_features']}")
             
             successful.append(resort_name)
