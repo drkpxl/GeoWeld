@@ -191,7 +191,7 @@ function App() {
         container: mapContainer.current,
         style: "mapbox://styles/alterramtnco/cmej0nr37002j01sigk347cuh",
         center: [center.lng, center.lat],
-        zoom: 13,
+        zoom: 14,
       });
 
       map.current.on("load", () => {
@@ -202,26 +202,26 @@ function App() {
         });
 
         // Add layers for different feature types
-        // Boundaries
+        // Boundaries (ski area and feature boundaries)
         map.current.addLayer({
           id: "boundaries",
           type: "fill",
           source: "resort-data",
           filter: [
             "in",
-            ["get", "ZoneType"],
-            ["literal", ["ski_area_boundary", "feature_boundary"]],
+            ["get", "type"],
+            ["literal", ["boundary:ski", "boundary:feature"]],
           ],
           paint: {
             "fill-color": [
               "case",
-              ["==", ["get", "ZoneType"], "ski_area_boundary"],
+              ["==", ["get", "type"], "boundary:ski"],
               "rgba(33, 150, 243, 0.1)",
               "rgba(156, 39, 176, 0.1)",
             ],
             "fill-outline-color": [
               "case",
-              ["==", ["get", "ZoneType"], "ski_area_boundary"],
+              ["==", ["get", "type"], "boundary:ski"],
               "#2196F3",
               "#9C27B0",
             ],
@@ -233,7 +233,7 @@ function App() {
           id: "slow-zones",
           type: "fill",
           source: "resort-data",
-          filter: ["==", ["get", "ZoneType"], "slow_zone"],
+          filter: ["==", ["get", "type"], "zone:slow"],
           paint: {
             "fill-color": "rgba(255, 193, 7, 0.3)",
             "fill-outline-color": "#FFC107",
@@ -245,7 +245,7 @@ function App() {
           id: "closed-areas",
           type: "fill",
           source: "resort-data",
-          filter: ["==", ["get", "ZoneType"], "closed_area"],
+          filter: ["==", ["get", "type"], "zone:closed"],
           paint: {
             "fill-color": "rgba(244, 67, 54, 0.3)",
             "fill-outline-color": "#F44336",
@@ -257,7 +257,7 @@ function App() {
           id: "beginner-areas",
           type: "fill",
           source: "resort-data",
-          filter: ["==", ["get", "ZoneType"], "beginner_area"],
+          filter: ["==", ["get", "type"], "zone:beginner"],
           paint: {
             "fill-color": "rgba(76, 175, 80, 0.3)",
             "fill-outline-color": "#4CAF50",
@@ -269,7 +269,7 @@ function App() {
           id: "forests",
           type: "fill",
           source: "resort-data",
-          filter: ["==", ["get", "feature_type"], "forest"],
+          filter: ["==", ["get", "type"], "forest"],
           paint: {
             "fill-color": "rgba(46, 125, 50, 0.4)",
             "fill-outline-color": "#2E7D32",
@@ -281,7 +281,7 @@ function App() {
           id: "trees",
           type: "circle",
           source: "resort-data",
-          filter: ["==", ["get", "feature_type"], "tree"],
+          filter: ["==", ["get", "type"], "tree:mixed"],
           paint: {
             "circle-radius": 3,
             "circle-color": "#1B5E20",
@@ -294,7 +294,7 @@ function App() {
           id: "rocks",
           type: "fill",
           source: "resort-data",
-          filter: ["==", ["get", "feature_type"], "rock"],
+          filter: ["==", ["get", "type"], "rock"],
           paint: {
             "fill-color": "rgba(158, 158, 158, 0.6)",
             "fill-outline-color": "#616161",
