@@ -273,7 +273,7 @@ app.get('/api/mapbox-token', (req, res) => {
   res.json({ token: process.env.MAPBOX_TOKEN });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4011;
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Access the web interface at http://100.101.39.4:${PORT}`);
