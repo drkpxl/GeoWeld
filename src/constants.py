@@ -3,8 +3,8 @@ Constants for GeoJSON processing
 """
 
 # Area thresholds (square meters)
-SMALL_AREA_THRESHOLD = 5000      # 0.5 hectares
-MEDIUM_AREA_THRESHOLD = 25000    # 2.5 hectares
+SMALL_AREA_THRESHOLD = 3000      # 0.5 hectares
+MEDIUM_AREA_THRESHOLD = 20000    # 2.5 hectares
 LARGE_AREA_THRESHOLD = 100000    # 10 hectares
 
 # Default tree density settings (trees per hectare)

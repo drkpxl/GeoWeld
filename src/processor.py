@@ -420,9 +420,19 @@ class ResortProcessor:
         """Process rock features."""
         rock_features = []
         
-        # Filter for rock features
-        rock_mask = features_gdf['natural'].isin(['rock', 'cliff', 'scree', 'bare_rock', 'stone']) | \
-                   (features_gdf['landuse'] == 'quarry')
+        # Check if the dataframe is empty
+        if features_gdf.empty:
+            print("No OSM features found, skipping rock processing")
+            return []
+        
+        # Filter for rock features (check if columns exist first)
+        rock_mask = pd.Series([False] * len(features_gdf), index=features_gdf.index)
+        
+        if 'natural' in features_gdf.columns:
+            rock_mask |= features_gdf['natural'].isin(['rock', 'cliff', 'scree', 'bare_rock', 'stone'])
+        if 'landuse' in features_gdf.columns:
+            rock_mask |= (features_gdf['landuse'] == 'quarry')
+        
         rock_gdf = features_gdf[rock_mask].copy()
         
         if rock_gdf.empty:
