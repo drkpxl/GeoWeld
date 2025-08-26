@@ -92,6 +92,8 @@ class OverpassClient:
   // Tree nodes
   node["natural"="tree"]({min_lat},{min_lon},{max_lat},{max_lon});
 );
+// Recursively get all members of relations to build complete geometries
+(._; rel(r); >>;);
 out geom;
 """
         return query.strip()
@@ -100,19 +102,34 @@ out geom;
         """Convert Overpass JSON to GeoJSON format."""
         features = []
         
+        skipped_count = 0
+        geometry_failures = 0
+        
         for element in overpass_data.get('elements', []):
+            element_id = f"{element['type']}/{element['id']}"
+            
             # Check if element has geometry data (ways/relations) or is a node with lat/lon
             if element['type'] == 'node':
                 # Nodes have lat/lon directly, not in a geometry field
                 if 'lat' not in element or 'lon' not in element:
+                    logger.debug(f"Skipping node {element_id}: missing lat/lon")
+                    skipped_count += 1
                     continue
-            elif 'geometry' not in element:
-                # Ways and relations need geometry field
+            elif element['type'] == 'way' and 'geometry' not in element:
+                # Ways need geometry field
+                logger.debug(f"Skipping way {element_id}: missing geometry field")
+                skipped_count += 1
+                continue
+            elif element['type'] == 'relation' and 'members' not in element:
+                # Relations need members field
+                logger.debug(f"Skipping relation {element_id}: missing members field")
+                skipped_count += 1
                 continue
             
             # Convert Overpass geometry to GeoJSON geometry
             geometry = self._convert_geometry(element)
             if not geometry:
+                geometry_failures += 1
                 continue
             
             # Extract properties
@@ -130,6 +147,15 @@ out geom;
                 'geometry': geometry
             })
         
+        # Log conversion summary
+        total_elements = len(overpass_data.get('elements', []))
+        if skipped_count > 0:
+            logger.info(f"Skipped {skipped_count} elements due to missing geometry/coordinates")
+        if geometry_failures > 0:
+            logger.warning(f"Failed to convert geometry for {geometry_failures} elements")
+        
+        logger.info(f"Converted {len(features)} of {total_elements} OSM elements to GeoJSON features")
+        
         return {
             'type': 'FeatureCollection',
             'generator': 'GeoWeld Overpass Client',
@@ -139,52 +165,97 @@ out geom;
     
     def _convert_geometry(self, element: Dict) -> Optional[Dict]:
         """Convert Overpass element geometry to GeoJSON geometry."""
-        if element['type'] == 'node':
-            # Handle point geometries for tree nodes
-            if 'lat' in element and 'lon' in element:
-                return {
-                    'type': 'Point',
-                    'coordinates': [element['lon'], element['lat']]
-                }
+        element_id = f"{element['type']}/{element['id']}"
         
-        elif element['type'] == 'way':
-            coords = [[node['lon'], node['lat']] for node in element['geometry']]
+        try:
+            if element['type'] == 'node':
+                # Handle point geometries for tree nodes
+                if 'lat' in element and 'lon' in element:
+                    return {
+                        'type': 'Point',
+                        'coordinates': [element['lon'], element['lat']]
+                    }
             
-            # Check if it's a closed way (polygon)
-            if len(coords) > 2 and coords[0] == coords[-1]:
-                return {
-                    'type': 'Polygon',
-                    'coordinates': [coords]
-                }
-            else:
-                return {
-                    'type': 'LineString',
-                    'coordinates': coords
-                }
-        
-        elif element['type'] == 'relation':
-            # Handle multipolygon relations
-            if element.get('tags', {}).get('type') == 'multipolygon':
-                polygons = []
+            elif element['type'] == 'way':
+                coords = [[node['lon'], node['lat']] for node in element['geometry']]
                 
-                for member in element.get('members', []):
-                    if member['type'] == 'way' and 'geometry' in member:
-                        coords = [[node['lon'], node['lat']] for node in member['geometry']]
-                        if member['role'] == 'outer':
-                            polygons.append([coords])
-                        # Note: Inner rings would need more complex handling
-                
-                if len(polygons) == 1:
+                # Check if it's a closed way (polygon)
+                if len(coords) > 2 and coords[0] == coords[-1]:
                     return {
                         'type': 'Polygon',
-                        'coordinates': polygons[0]
+                        'coordinates': [coords]
                     }
-                elif len(polygons) > 1:
+                else:
                     return {
-                        'type': 'MultiPolygon',
-                        'coordinates': polygons
+                        'type': 'LineString',
+                        'coordinates': coords
                     }
+            
+            elif element['type'] == 'relation':
+                # Handle multipolygon relations and forest/area relations
+                tags = element.get('tags', {})
+                relation_type = tags.get('type')
+                
+                # Check if this is a multipolygon or an area relation (forest, rock, etc.)
+                is_multipolygon = relation_type == 'multipolygon'
+                is_area_relation = any(tag in tags for tag in ['landuse', 'natural', 'leisure', 'amenity'])
+                
+                if is_multipolygon or is_area_relation:
+                    outer_rings = []
+                    inner_rings = []
+                    
+                    for member in element.get('members', []):
+                        if member['type'] == 'way' and 'geometry' in member:
+                            coords = [[node['lon'], node['lat']] for node in member['geometry']]
+                            # Ensure ring is closed
+                            if len(coords) > 2 and coords[0] != coords[-1]:
+                                coords.append(coords[0])
+                            
+                            if member['role'] == 'outer':
+                                outer_rings.append(coords)
+                            elif member['role'] == 'inner':
+                                inner_rings.append(coords)
+                            elif member['role'] == '':
+                                # Default to outer if role is empty
+                                outer_rings.append(coords)
+                    
+                    if not outer_rings:
+                        logger.warning(f"Relation {element_id} has no outer rings")
+                        return None
+                    
+                    if len(outer_rings) == 1:
+                        # Single polygon (potentially with holes)
+                        coordinates = [outer_rings[0]] + inner_rings
+                        return {
+                            'type': 'Polygon',
+                            'coordinates': coordinates
+                        }
+                    else:
+                        # Multiple polygons - create MultiPolygon
+                        polygons = []
+                        for outer in outer_rings:
+                            # For simplicity, assign all inner rings to first outer
+                            # More complex logic would match inners to their containing outers
+                            if outer == outer_rings[0]:
+                                polygons.append([outer] + inner_rings)
+                            else:
+                                polygons.append([outer])
+                        
+                        return {
+                            'type': 'MultiPolygon',
+                            'coordinates': polygons
+                        }
+                
+                else:
+                    # Handle other relation types if needed
+                    logger.debug(f"Skipping relation {element_id} of type {relation_type} (no area tags)")
+                    return None
         
+        except Exception as e:
+            logger.error(f"Failed to convert geometry for {element_id}: {e}")
+            return None
+        
+        logger.warning(f"Could not convert geometry for {element_id} (type: {element['type']})")
         return None
 
 
