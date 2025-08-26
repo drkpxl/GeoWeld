@@ -196,7 +196,7 @@ function App() {
 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: "mapbox://styles/alterramtnco/cmej0nr37002j01sigk347cuh",
+        style: "mapbox://styles/alterramtnco/cmcj8qz2g000401sqgngdh9pm",
         center: [center.lng, center.lat],
         zoom: 14,
       });
