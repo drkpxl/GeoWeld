@@ -133,3 +133,36 @@ jobs:
             geoweld-deployment-${{ github.ref_name }}.tar.gz
             geoweld-deployment/docker-compose.yml
           generate_release_notes: true
+
+  update-docker-compose:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-image, create-release-assets]
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update docker-compose.yml with new version
+        run: |
+          # Update the image tag in docker-compose.yml
+          sed -i "s|image: ghcr.io/drkpxl/geoweld:.*|image: ghcr.io/drkpxl/geoweld:${{ github.ref_name }}|" docker-compose.yml
+          
+          # Check if there are changes
+          if git diff --quiet docker-compose.yml; then
+            echo "No changes to docker-compose.yml"
+            exit 0
+          fi
+          
+          # Configure git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Commit and push changes
+          git add docker-compose.yml
+          git commit -m "chore: Update docker-compose.yml to use ${{ github.ref_name }}"
+          git push origin main
