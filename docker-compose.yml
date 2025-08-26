@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   geoweld:
-    image: ghcr.io/drkpxl/geoweld:latest
+    image: ghcr.io/drkpxl/geoweld:v1.4.0
     container_name: geoweld
     ports:
       - "4011:4011"
