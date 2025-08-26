@@ -64,13 +64,19 @@ jobs:
 
       - name: Create release assets
         run: |
-          # Create production docker-compose.yml
-          sed 's/build: \./image: ghcr.io\/drkpxl\/geoweld:${{ github.ref_name }}/' docker-compose.yml > docker-compose.prod.yml
+          # Create registry-based docker-compose.yml for users with registry access
+          sed 's/build: \./image: ghcr.io\/drkpxl\/geoweld:${{ github.ref_name }}/' docker-compose.prod.yml > docker-compose.registry.yml
           
-          # Create deployment bundle
-          mkdir geoweld-deployment
+          # Create deployment bundles
+          mkdir geoweld-deployment geoweld-deployment-registry
+          
+          # Local build version (default)
           cp docker-compose.prod.yml geoweld-deployment/docker-compose.yml
           cp .env.example geoweld-deployment/
+          
+          # Registry version (for users with access)
+          cp docker-compose.registry.yml geoweld-deployment-registry/docker-compose.yml
+          cp .env.example geoweld-deployment-registry/
           
           # Create quick start script
           cat > geoweld-deployment/start.sh << 'EOF'
@@ -85,8 +91,8 @@ jobs:
             exit 1
           fi
           
-          # Start containers
-          docker compose up -d
+          # Start containers (builds locally)
+          docker compose up -d --build
           echo "GeoWeld started! Access at http://localhost:4011"
           EOF
           
@@ -111,7 +117,7 @@ jobs:
              
           Or manually:
              ```bash
-             docker compose up -d
+             docker compose up -d --build
              ```
           
           3. Access the web interface at http://localhost:4011
@@ -123,15 +129,18 @@ jobs:
           - Data persistence via Docker volumes
           EOF
           
-          # Create tar archive
+          # Create tar archives
           tar -czf geoweld-deployment-${{ github.ref_name }}.tar.gz geoweld-deployment/
+          tar -czf geoweld-deployment-registry-${{ github.ref_name }}.tar.gz geoweld-deployment-registry/
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
             geoweld-deployment-${{ github.ref_name }}.tar.gz
+            geoweld-deployment-registry-${{ github.ref_name }}.tar.gz
             geoweld-deployment/docker-compose.yml
+            geoweld-deployment-registry/docker-compose.yml
           generate_release_notes: true
 
   update-docker-compose:
@@ -149,7 +158,7 @@ jobs:
 
       - name: Update docker-compose.yml with new version
         run: |
-          # Update the image tag in docker-compose.yml
+          # Update the image tag in the main docker-compose.yml (used for registry pulls)
           sed -i "s|image: ghcr.io/drkpxl/geoweld:.*|image: ghcr.io/drkpxl/geoweld:${{ github.ref_name }}|" docker-compose.yml
           
           # Check if there are changes

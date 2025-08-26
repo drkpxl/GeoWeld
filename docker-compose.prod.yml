@@ -1,0 +1,28 @@
+services:
+  geoweld:
+    build: .
+    container_name: geoweld
+    ports:
+      - "4011:4011"
+    environment:
+      - NODE_ENV=production
+      - PORT=4011
+      - MAPBOX_TOKEN=${MAPBOX_TOKEN}
+    volumes:
+      # Mount data and output directories for persistence
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./config:/app/config
+      # Mount uploads directory
+      - geoweld-uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - geoweld-network
+
+volumes:
+  geoweld-uploads:
+    driver: local
+
+networks:
+  geoweld-network:
+    driver: bridge
