@@ -2,24 +2,30 @@ version: '3.8'
 
 services:
   geoweld:
-    image: ghcr.io/drkpxl/geoweld:latest
-    container_name: geoweld
+    build: .
+    container_name: geoweld-dev
     ports:
       - "4011:4011"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=4011
       - MAPBOX_TOKEN=${MAPBOX_TOKEN}
     volumes:
+      # Mount source code for live development
+      - ./web:/app/web
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./config:/app/config
       # Mount data and output directories for persistence
       - ./data:/app/data
       - ./output:/app/output
-      - ./config:/app/config
       # Mount uploads directory
       - geoweld-uploads:/app/uploads
     restart: unless-stopped
     networks:
       - geoweld-network
+    # Override CMD for development with nodemon
+    command: ["sh", "-c", "cd /app/web && npm install && npm run dev"]
 
 volumes:
   geoweld-uploads:
