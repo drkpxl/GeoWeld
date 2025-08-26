@@ -3,6 +3,7 @@ stratton:
   data_files:
     boundaries: data/stratton/boundaries.geojson
     osm_features: data/stratton/osm_features.geojson
+  default_tree_type: tree:mixed  # Vermont mixed forest ecology
   tree_config:
     min_area_for_trees: 5000
     small_area_threshold: 25000
@@ -18,6 +19,7 @@ mammoth:
   data_files:
     boundaries: data/mammoth/boundaries.geojson
     osm_features: data/mammoth/osm_features.geojson
+  default_tree_type: tree:needle  # High elevation coniferous forest
   tree_config:
     min_area_for_trees: 5000
     small_area_threshold: 25000

@@ -208,8 +208,17 @@ class ResortProcessor:
         
         return points
     
-    def _map_tree_type(self, leaf_type: Optional[str], leaf_cycle: Optional[str] = None) -> str:
-        """Map OSM leaf_type to standardized tree type."""
+    def _map_tree_type(self, leaf_type: Optional[str], leaf_cycle: Optional[str] = None, default_type: str = 'tree:mixed') -> str:
+        """Map OSM leaf_type to standardized tree type.
+        
+        Args:
+            leaf_type: OSM leaf_type value (needleleaved, broadleaved, mixed, or None)
+            leaf_cycle: OSM leaf_cycle value (optional, unused currently)
+            default_type: Default tree type when leaf_type is not defined
+            
+        Returns:
+            Standardized tree type (tree:needle, tree:broad, or tree:mixed)
+        """
         if leaf_type == 'needleleaved':
             return 'tree:needle'
         elif leaf_type == 'broadleaved':
@@ -217,8 +226,8 @@ class ResortProcessor:
         elif leaf_type == 'mixed':
             return 'tree:mixed'
         else:
-            # Default fallback when leaf_type is not defined
-            return 'tree:mixed'
+            # Use resort-specific default when leaf_type is not defined
+            return default_type
     
     def process_osm_tree_nodes(self, features_gdf: gpd.GeoDataFrame) -> List[Dict]:
         """Process OSM tree nodes (actual tree points from OSM data)."""
@@ -255,7 +264,7 @@ class ResortProcessor:
             # Map leaf_type to standardized tree type
             leaf_type = row.get('leaf_type')
             leaf_cycle = row.get('leaf_cycle')
-            tree_type = self._map_tree_type(leaf_type, leaf_cycle)
+            tree_type = self._map_tree_type(leaf_type, leaf_cycle, self.config.get('default_tree_type', 'tree:mixed'))
             
             tree_feature = {
                 "type": "Feature",
@@ -326,7 +335,7 @@ class ResortProcessor:
                 # Map leaf_type to standardized tree type
                 leaf_type = row.get('leaf_type')
                 leaf_cycle = row.get('leaf_cycle')
-                tree_type = self._map_tree_type(leaf_type, leaf_cycle)
+                tree_type = self._map_tree_type(leaf_type, leaf_cycle, self.config.get('default_tree_type', 'tree:mixed'))
 
                 for i, (polygon, poly_area) in enumerate(zip(valid_polygons, polygon_areas)):
                     # Calculate trees for this polygon
@@ -397,7 +406,7 @@ class ResortProcessor:
             # Map leaf_type to standardized tree type
             leaf_type = row.get('leaf_type')
             leaf_cycle = row.get('leaf_cycle')
-            tree_type = self._map_tree_type(leaf_type, leaf_cycle)
+            tree_type = self._map_tree_type(leaf_type, leaf_cycle, self.config.get('default_tree_type', 'tree:mixed'))
             
             feature = {
                 "type": "Feature",
