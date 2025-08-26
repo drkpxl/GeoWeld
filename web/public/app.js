@@ -105,7 +105,10 @@ function App() {
       await fetch(`${API_URL}/api/resort/${selectedResort}/config`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tree_config: config.tree_config }),
+        body: JSON.stringify({ 
+          tree_config: config.tree_config,
+          default_tree_type: config.default_tree_type
+        }),
       });
     } catch (err) {
       console.error("Error updating config:", err);
@@ -471,6 +474,29 @@ function App() {
             </p>
 
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Default Tree Type
+                </label>
+                <select
+                  value={config.default_tree_type || 'tree:mixed'}
+                  onChange={(e) => {
+                    setConfig({
+                      ...config,
+                      default_tree_type: e.target.value,
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="tree:mixed">Mixed (deciduous + coniferous)</option>
+                  <option value="tree:needle">Needle (coniferous/evergreen)</option>
+                  <option value="tree:broad">Broad (deciduous/broadleaved)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Used when OSM data doesn't specify tree type. Choose based on your resort's typical forest ecology.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Small Area Trees (per hectare):{" "}

@@ -91,6 +91,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
           boundaries: `data/${resortName}/boundaries.geojson`,
           osm_features: `data/${resortName}/osm_features.geojson`
         },
+        default_tree_type: 'tree:mixed',  // Default fallback tree type
         tree_config: {
           min_area_for_trees: 5000,
           small_area_threshold: 25000,
@@ -169,11 +170,16 @@ app.put('/api/resort/:name/config', async (req, res) => {
       return res.status(404).json({ error: 'Resort not found' });
     }
     
-    // Update tree_config only
+    // Update tree_config and default_tree_type
     config[req.params.name].tree_config = {
       ...config[req.params.name].tree_config,
       ...req.body.tree_config
     };
+    
+    // Update default_tree_type if provided
+    if (req.body.default_tree_type) {
+      config[req.params.name].default_tree_type = req.body.default_tree_type;
+    }
     
     await fs.writeFile(configPath, yaml.dump(config), 'utf8');
     res.json({ success: true });
