@@ -196,7 +196,7 @@ function App() {
 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: "mapbox://styles/alterramtnco/cmcj8qz2g000401sqgngdh9pm",
+        style: "/theme/style.json",
         center: [center.lng, center.lat],
         zoom: 14,
       });
@@ -291,37 +291,32 @@ function App() {
           },
         });
 
-        // Individual trees (points) - all tree types
+        // Individual trees (points) - using custom sprites
         map.current.addLayer({
           id: "trees",
-          type: "circle",
+          type: "symbol",
           source: "resort-data",
           filter: [
             "all",
             ["in", ["get", "type"], ["literal", ["tree:needle", "tree:broad", "tree:mixed"]]],
             ["==", ["geometry-type"], "Point"]
           ],
-          paint: {
-            "circle-radius": [
+          layout: {
+            "icon-image": [
               "case",
-              ["==", ["get", "source"], "osm"], 4, // OSM trees slightly larger
-              3 // Generated trees
+              ["==", ["get", "type"], "tree:needle"], "tree-needle-001",
+              ["==", ["get", "type"], "tree:broad"], "tree-broad-snow-001", 
+              ["==", ["get", "type"], "tree:mixed"], "tree-needle-001", // Use needle as default for mixed
+              "tree-needle-001" // Default fallback
             ],
-            "circle-color": [
+            "icon-size": [
               "case",
-              ["==", ["get", "type"], "tree:needle"], "#0D4F1C", // Dark green for needle
-              ["==", ["get", "type"], "tree:broad"], "#8BC34A", // Light green for broad  
-              ["==", ["get", "type"], "tree:mixed"], "#4CAF50", // Medium green for mixed
-              "#1B5E20" // Default green
+              ["==", ["get", "source"], "osm"], 1.2, // OSM trees slightly larger
+              1.0 // Generated trees normal size
             ],
-            "circle-opacity": 0.8,
-            "circle-stroke-width": [
-              "case",
-              ["==", ["get", "source"], "osm"], 1, // OSM trees have border
-              0 // Generated trees no border
-            ],
-            "circle-stroke-color": "#ffffff",
-          },
+            "icon-allow-overlap": true,
+            "icon-ignore-placement": true
+          }
         });
 
         // Rocks
