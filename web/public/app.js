@@ -16,6 +16,8 @@ function App() {
   const [showMap, setShowMap] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [validationErrors, setValidationErrors] = useState([]);
+  const [selectedFeature, setSelectedFeature] = useState(null);
+  const [featureStats, setFeatureStats] = useState(null);
   const mapContainer = useRef(null);
   const map = useRef(null);
   const fileInput = useRef(null);
@@ -200,6 +202,10 @@ function App() {
       });
 
       map.current.on("load", () => {
+        // Calculate feature statistics
+        const stats = calculateFeatureStats(mapData);
+        setFeatureStats(stats);
+
         // Add the GeoJSON source
         map.current.addSource("resort-data", {
           type: "geojson",
@@ -285,20 +291,36 @@ function App() {
           },
         });
 
-        // Individual trees (points)
+        // Individual trees (points) - all tree types
         map.current.addLayer({
           id: "trees",
           type: "circle",
           source: "resort-data",
           filter: [
             "all",
-            ["==", ["get", "type"], "tree:mixed"],
+            ["in", ["get", "type"], ["literal", ["tree:needle", "tree:broad", "tree:mixed"]]],
             ["==", ["geometry-type"], "Point"]
           ],
           paint: {
-            "circle-radius": 3,
-            "circle-color": "#1B5E20",
-            "circle-opacity": 0.7,
+            "circle-radius": [
+              "case",
+              ["==", ["get", "source"], "osm"], 4, // OSM trees slightly larger
+              3 // Generated trees
+            ],
+            "circle-color": [
+              "case",
+              ["==", ["get", "type"], "tree:needle"], "#0D4F1C", // Dark green for needle
+              ["==", ["get", "type"], "tree:broad"], "#8BC34A", // Light green for broad  
+              ["==", ["get", "type"], "tree:mixed"], "#4CAF50", // Medium green for mixed
+              "#1B5E20" // Default green
+            ],
+            "circle-opacity": 0.8,
+            "circle-stroke-width": [
+              "case",
+              ["==", ["get", "source"], "osm"], 1, // OSM trees have border
+              0 // Generated trees no border
+            ],
+            "circle-stroke-color": "#ffffff",
           },
         });
 
@@ -312,6 +334,36 @@ function App() {
             "fill-color": "rgba(158, 158, 158, 0.6)",
             "fill-outline-color": "#616161",
           },
+        });
+
+        // Add click handlers for interactive features
+        const clickableLayers = ['boundaries', 'slow-zones', 'closed-areas', 'beginner-areas', 'forests', 'trees', 'rocks'];
+        
+        clickableLayers.forEach(layerId => {
+          map.current.on('click', layerId, (e) => {
+            try {
+              if (e.features && e.features.length > 0) {
+                const feature = e.features[0];
+                console.log('Feature clicked:', { layerId, feature, coordinates: e.lngLat });
+                setSelectedFeature({
+                  ...feature,
+                  layerId: layerId,
+                  coordinates: e.lngLat
+                });
+              }
+            } catch (error) {
+              console.error('Error handling click:', error);
+            }
+          });
+
+          // Change cursor on hover
+          map.current.on('mouseenter', layerId, () => {
+            map.current.getCanvas().style.cursor = 'pointer';
+          });
+
+          map.current.on('mouseleave', layerId, () => {
+            map.current.getCanvas().style.cursor = '';
+          });
         });
 
         // Fit to bounds with padding
@@ -331,6 +383,72 @@ function App() {
     window.open(`${API_URL}/api/download/${resort}/${file}`, "_blank");
   };
 
+  const calculateFeatureStats = (geoJsonData) => {
+    if (!geoJsonData?.features) return null;
+
+    const stats = {
+      total_features: 0,
+      boundaries: { total: 0, ski_area: 0, feature: 0 },
+      zones: { slow: 0, closed: 0, beginner: 0 },
+      forests: { total: 0, area_hectares: 0 },
+      trees: {
+        total: 0,
+        osm: 0,
+        generated: 0,
+        needle: 0,
+        broad: 0,
+        mixed: 0,
+        unknown: 0
+      },
+      rocks: { total: 0, area_hectares: 0 }
+    };
+
+    geoJsonData.features.forEach(feature => {
+      const type = feature.properties.type;
+      const geomType = feature.geometry.type;
+
+      stats.total_features++;
+
+      if (type?.startsWith('boundary:')) {
+        stats.boundaries.total++;
+        if (type === 'boundary:ski') stats.boundaries.ski_area++;
+        else if (type === 'boundary:feature') stats.boundaries.feature++;
+      } else if (type?.startsWith('zone:')) {
+        if (type === 'zone:slow') stats.zones.slow++;
+        else if (type === 'zone:closed') stats.zones.closed++;
+        else if (type === 'zone:beginner') stats.zones.beginner++;
+      } else if (feature.properties.trees && geomType === 'Polygon') {
+        stats.forests.total++;
+        if (feature.properties.area_sq_meters) {
+          stats.forests.area_hectares += feature.properties.area_sq_meters / 10000;
+        }
+      } else if (type?.startsWith('tree:') && geomType === 'Point') {
+        stats.trees.total++;
+        
+        // Count by source
+        if (feature.properties.source === 'osm') stats.trees.osm++;
+        else stats.trees.generated++;
+
+        // Count by type
+        if (type === 'tree:needle') stats.trees.needle++;
+        else if (type === 'tree:broad') stats.trees.broad++;
+        else if (type === 'tree:mixed') stats.trees.mixed++;
+        else stats.trees.unknown++;
+      } else if (type === 'rock') {
+        stats.rocks.total++;
+        if (feature.properties.area_sq_meters) {
+          stats.rocks.area_hectares += feature.properties.area_sq_meters / 10000;
+        }
+      }
+    });
+
+    // Round hectares to 2 decimal places
+    stats.forests.area_hectares = Math.round(stats.forests.area_hectares * 100) / 100;
+    stats.rocks.area_hectares = Math.round(stats.rocks.area_hectares * 100) / 100;
+
+    return stats;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -345,36 +463,41 @@ function App() {
 
         {/* Progress Steps */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-4 overflow-x-auto">
-            {[1, 2, 3, 4, 5, 6].map((s) => (
-              <div key={s} className="flex items-center flex-shrink-0">
-                <div
-                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-sm ${
-                    step >= s
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-500"
-                  }`}
-                >
-                  {s}
+          <div className="flex items-center justify-center mb-4 overflow-x-auto">
+            {[1, 2, 3, 4, 5, 6].map((s, index) => (
+              <div key={s} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 ${
+                      step >= s
+                        ? "bg-blue-500 text-white shadow-lg"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                  >
+                    {step > s ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : s}
+                  </div>
+                  <div className={`mt-2 text-xs font-medium whitespace-nowrap ${
+                    step >= s ? "text-blue-600" : "text-gray-500"
+                  }`}>
+                    {[
+                      "Upload", "Name", "Configure", "Process", "Preview", "Download"
+                    ][index]}
+                  </div>
                 </div>
                 {s < 6 && (
                   <div
-                    className={`h-1 mx-1 sm:mx-2 ${
+                    className={`flex-1 h-0.5 mx-4 transition-all duration-300 ${
                       step > s ? "bg-blue-500" : "bg-gray-200"
                     }`}
-                    style={{ width: "30px" }}
+                    style={{ minWidth: "40px", maxWidth: "80px" }}
                   ></div>
                 )}
               </div>
             ))}
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2 text-xs text-center">
-            <div className="sm:block">Upload</div>
-            <div className="sm:block">Name</div>
-            <div className="sm:block">Configure</div>
-            <div className="sm:block">Process</div>
-            <div className="sm:block">Preview</div>
-            <div className="sm:block">Download</div>
           </div>
         </div>
 
@@ -724,35 +847,140 @@ function App() {
             )}
 
             {showMap && (
-              <div>
-                <div
-                  ref={mapContainer}
-                  className="w-full h-96 rounded-lg mb-4"
-                ></div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-blue-200 border border-blue-500 mr-2"></div>
-                    <span>Ski Area Boundary</span>
+              <div className="space-y-6">
+                {/* Feature Statistics Dashboard */}
+                {featureStats && (
+                  <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-800">Feature Statistics</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      {/* Total Features */}
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="text-2xl font-bold text-blue-600">{featureStats.total_features}</div>
+                        <div className="text-sm text-gray-600">Total Features</div>
+                      </div>
+
+                      {/* Boundaries */}
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="text-2xl font-bold text-purple-600">{featureStats.boundaries.total}</div>
+                        <div className="text-sm text-gray-600">Boundaries</div>
+                        <div className="text-xs text-gray-500">
+                          {featureStats.boundaries.ski_area} ski • {featureStats.boundaries.feature} feature
+                        </div>
+                      </div>
+
+                      {/* Forests */}
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="text-2xl font-bold text-green-600">{featureStats.forests.total}</div>
+                        <div className="text-sm text-gray-600">Forest Areas</div>
+                        <div className="text-xs text-gray-500">
+                          {featureStats.forests.area_hectares} hectares
+                        </div>
+                      </div>
+
+                      {/* Total Trees */}
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="text-2xl font-bold text-emerald-600">{featureStats.trees.total}</div>
+                        <div className="text-sm text-gray-600">Tree Points</div>
+                        <div className="text-xs text-gray-500">
+                          {featureStats.trees.osm} OSM • {featureStats.trees.generated} generated
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tree Type Breakdown */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="flex items-center mb-2">
+                          <div className="w-3 h-3 rounded-full bg-green-800 mr-2"></div>
+                          <span className="text-sm font-medium text-gray-700">Needle Trees</span>
+                        </div>
+                        <div className="text-lg font-bold text-green-800">{featureStats.trees.needle}</div>
+                      </div>
+                      
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="flex items-center mb-2">
+                          <div className="w-3 h-3 rounded-full bg-green-400 mr-2"></div>
+                          <span className="text-sm font-medium text-gray-700">Broad Trees</span>
+                        </div>
+                        <div className="text-lg font-bold text-green-400">{featureStats.trees.broad}</div>
+                      </div>
+                      
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <div className="flex items-center mb-2">
+                          <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                          <span className="text-sm font-medium text-gray-700">Mixed Trees</span>
+                        </div>
+                        <div className="text-lg font-bold text-green-500">{featureStats.trees.mixed}</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-yellow-300 border border-yellow-600 mr-2"></div>
-                    <span>Slow Zones</span>
+                )}
+
+                {/* Enhanced Map */}
+                <div className="relative">
+                  <div
+                    ref={mapContainer}
+                    className="w-full h-128 rounded-lg mb-4 border-2 border-gray-200"
+                    style={{ height: '32rem' }}
+                  ></div>
+                  
+                  {/* Click instruction */}
+                  <div className="absolute top-2 left-2 bg-white bg-opacity-90 px-3 py-1 rounded-md text-xs text-gray-600">
+                    💡 Click on features to inspect details
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-red-300 border border-red-600 mr-2"></div>
-                    <span>Closed Areas</span>
+                </div>
+
+                {/* Enhanced Legend */}
+                <div className="bg-white p-4 rounded-lg border">
+                  <h4 className="font-medium text-gray-800 mb-3">Map Legend</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-blue-200 border border-blue-500 mr-2 rounded"></div>
+                      <span>Boundaries ({featureStats?.boundaries.total || 0})</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-yellow-300 border border-yellow-600 mr-2 rounded"></div>
+                      <span>Slow Zones ({featureStats?.zones.slow || 0})</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-red-300 border border-red-600 mr-2 rounded"></div>
+                      <span>Closed Areas ({featureStats?.zones.closed || 0})</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-green-300 border border-green-600 mr-2 rounded"></div>
+                      <span>Beginner Areas ({featureStats?.zones.beginner || 0})</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-green-600 mr-2 rounded"></div>
+                      <span>Forests ({featureStats?.forests.total || 0})</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-gray-500 mr-2 rounded"></div>
+                      <span>Rocks ({featureStats?.rocks.total || 0})</span>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-green-300 border border-green-600 mr-2"></div>
-                    <span>Beginner Areas</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-green-600 mr-2"></div>
-                    <span>Forests</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-gray-500 mr-2"></div>
-                    <span>Rocks</span>
+                  
+                  {/* Tree Legend */}
+                  <div className="mt-4 pt-4 border-t">
+                    <h5 className="font-medium text-gray-700 mb-2">Tree Types</h5>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-green-900 mr-2"></div>
+                        <span>Needle ({featureStats?.trees.needle || 0})</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-green-400 mr-2"></div>
+                        <span>Broad ({featureStats?.trees.broad || 0})</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                        <span>Mixed ({featureStats?.trees.mixed || 0})</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Larger circles = OSM data • Smaller circles = Generated points
+                    </div>
                   </div>
                 </div>
               </div>
@@ -764,6 +992,40 @@ function App() {
             >
               Continue to Download
             </button>
+          </div>
+        )}
+
+        {/* Feature Inspection Modal - Simple Version */}
+        {selectedFeature && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-96 overflow-y-auto">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-semibold text-gray-800">Feature Details</h3>
+                <button
+                  onClick={() => setSelectedFeature(null)}
+                  className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-4">
+                <div className="mb-2">
+                  <strong>Type:</strong> {selectedFeature.properties?.type || 'Unknown'}
+                </div>
+                <div className="mb-2">
+                  <strong>Layer:</strong> {selectedFeature.layerId || 'Unknown'}
+                </div>
+                <div className="mb-2">
+                  <strong>Geometry:</strong> {selectedFeature.geometry?.type || 'Unknown'}
+                </div>
+                <div className="mb-4">
+                  <strong>Properties:</strong>
+                  <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-auto">
+{JSON.stringify(selectedFeature.properties || {}, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
