@@ -12,8 +12,9 @@ from pathlib import Path
 import pandas as pd
 import geopandas as gpd
 import numpy as np
-from shapely.geometry import Point, Polygon, MultiPolygon
+from shapely.geometry import Point, Polygon, MultiPolygon, GeometryCollection
 from shapely.ops import unary_union
+from shapely import make_valid
 
 from .constants import (
     SMALL_AREA_THRESHOLD, MEDIUM_AREA_THRESHOLD, LARGE_AREA_THRESHOLD,
@@ -144,7 +145,12 @@ class ResortProcessor:
         
         for idx, row in gdf.iterrows():
             try:
-                clipped_geom = row.geometry.intersection(self.feature_boundary)
+                # Fix invalid geometries before clipping
+                geom = row.geometry
+                if not geom.is_valid:
+                    geom = make_valid(geom)
+                
+                clipped_geom = geom.intersection(self.feature_boundary)
                 
                 # Only keep non-empty geometries
                 if not clipped_geom.is_empty and clipped_geom.area > 0:

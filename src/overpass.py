@@ -89,6 +89,8 @@ class OverpassClient:
   relation["natural"="stone"]({min_lat},{min_lon},{max_lat},{max_lon});
   relation["landuse"="quarry"]({min_lat},{min_lon},{max_lat},{max_lon});
 );
+// Recursively get all members of relations to build complete geometries
+(._; rel(r); >>;);
 out geom;
 """
         return query.strip()
@@ -98,7 +100,10 @@ out geom;
         features = []
         
         for element in overpass_data.get('elements', []):
-            if 'geometry' not in element:
+            # Skip elements without geometry (ways/relations need geometry/members)
+            if element['type'] == 'way' and 'geometry' not in element:
+                continue
+            elif element['type'] == 'relation' and 'members' not in element:
                 continue
             
             # Convert Overpass geometry to GeoJSON geometry
@@ -146,13 +151,30 @@ out geom;
                 }
         
         elif element['type'] == 'relation':
-            # Handle multipolygon relations
-            if element.get('tags', {}).get('type') == 'multipolygon':
+            # Handle multipolygon relations and area relations (forest/rock features)
+            tags = element.get('tags', {})
+            is_multipolygon = tags.get('type') == 'multipolygon'
+            is_area_relation = any(tag in tags for tag in ['landuse', 'natural', 'leisure', 'amenity'])
+            
+            if is_multipolygon or is_area_relation:
                 polygons = []
                 
                 for member in element.get('members', []):
                     if member['type'] == 'way' and 'geometry' in member:
                         coords = [[node['lon'], node['lat']] for node in member['geometry']]
+                        
+                        # Skip invalid ways (need at least 3 unique points for a polygon)
+                        if len(coords) < 3:
+                            continue
+                        
+                        # Ensure ring is closed (critical for GeoPandas compatibility)
+                        if coords[0] != coords[-1]:
+                            coords.append(coords[0])
+                        
+                        # Final check: need at least 4 points for a closed polygon
+                        if len(coords) < 4:
+                            continue
+                            
                         if member['role'] == 'outer':
                             polygons.append([coords])
                         # Note: Inner rings would need more complex handling
