@@ -539,6 +539,11 @@ class ResortProcessor:
         
         # Combine all features (OSM trees + generated trees)
         all_tree_points = osm_tree_points + generated_tree_points
+        
+        # Add incrementing integer IDs to all tree points
+        for tree_id, tree_feature in enumerate(all_tree_points, start=1):
+            tree_feature['properties']['id'] = tree_id
+        
         all_features = boundary_features + forest_features + all_tree_points + rock_features
         
         output_geojson = {
@@ -554,6 +559,7 @@ class ResortProcessor:
                 "tree_points_total": len(all_tree_points),
                 "tree_points_osm": len(osm_tree_points),
                 "tree_points_generated": len(generated_tree_points),
+                "tree_id_range": {"min": 1, "max": len(all_tree_points)} if all_tree_points else {"min": 0, "max": 0},
                 "rock_features": len(rock_features),
                 "tree_config": self.resort_config['tree_config'],
                 "center": self.resort_config.get('center'),
