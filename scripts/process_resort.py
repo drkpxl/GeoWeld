@@ -5,6 +5,7 @@ Main script for processing ski resort GeoJSON data.
 
 import argparse
 import json
+import logging
 import os
 import sys
 import yaml
@@ -13,7 +14,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.processor import ResortProcessor
+from src.processor import ResortProcessor, setup_logging
 from src.constants import CONFIG_FILE, OUTPUT_DIR
 
 
@@ -66,7 +67,21 @@ Examples:
         help='Only validate input files, do not process'
     )
     
+    parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        help='Enable verbose logging'
+    )
+    
     args = parser.parse_args()
+    
+    # Setup logging
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    log_file = f"geoweld_{args.resort if args.resort else 'all'}.log" if args.output else None
+    setup_logging(log_level, log_file)
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting GeoWeld processing - Resort: {args.resort or 'all'}")
     
     # Load configuration to get list of resorts
     try:

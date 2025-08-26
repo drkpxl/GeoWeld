@@ -14,6 +14,8 @@ function App() {
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapData, setMapData] = useState(null);
   const [showMap, setShowMap] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [validationErrors, setValidationErrors] = useState([]);
   const mapContainer = useRef(null);
   const map = useRef(null);
   const fileInput = useRef(null);
@@ -333,7 +335,7 @@ function App() {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
             GeoWeld Resort Processor
           </h1>
           <p className="text-gray-600">
@@ -434,6 +436,37 @@ function App() {
                   ? "Click to upload your boundaries.geojson file"
                   : "Enter a resort name first"}
               </p>
+              
+              {/* Upload error feedback */}
+              {uploadError && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex">
+                    <svg className="flex-shrink-0 h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-800">{uploadError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Validation errors */}
+              {validationErrors.length > 0 && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <div className="flex">
+                    <svg className="flex-shrink-0 h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-800 font-medium">File validation warnings:</p>
+                      <ul className="mt-1 text-sm text-yellow-700 list-disc list-inside">
+                        {validationErrors.map((error, i) => <li key={i}>{error}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {resorts.length > 0 && (
@@ -590,19 +623,19 @@ function App() {
               </div>
             </div>
 
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <button
                 onClick={async () => {
                   await updateConfig();
                   processResort();
                 }}
-                className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 font-medium"
+                className="flex-1 bg-blue-500 text-white px-4 py-3 rounded-md hover:bg-blue-600 font-medium text-sm sm:text-base"
               >
                 Save & Process Resort
               </button>
               <button
                 onClick={() => setStep(2)}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                className="px-4 py-3 border border-gray-300 rounded-md hover:bg-gray-50 text-sm sm:text-base"
               >
                 Back
               </button>
@@ -617,17 +650,49 @@ function App() {
               Step 4: Processing Resort
             </h2>
 
+            {/* Progress indicator */}
+            {processing && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Processing...</span>
+                  <span className="text-sm text-gray-500">This may take a few minutes</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="bg-blue-600 h-2.5 rounded-full animate-pulse" style={{width: '45%'}}></div>
+                </div>
+              </div>
+            )}
+
+            {/* Status message */}
+            {processOutput.length > 0 && (
+              <div className="mb-4">
+                {processing ? (
+                  <div className="flex items-center text-blue-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    <span className="text-sm">Processing resort data...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center text-green-600">
+                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm">Processing completed successfully</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm max-h-96 overflow-y-auto">
               {processOutput.map((line, i) => (
                 <div
                   key={i}
-                  className={line.type === "stderr" ? "text-yellow-400" : ""}
+                  className={`${line.type === "stderr" ? "text-yellow-400" : ""} ${line.type === "error" ? "text-red-400" : ""}`}
                 >
                   {line.message}
                 </div>
               ))}
-              {processing && (
-                <div className="animate-pulse-slow">Processing...</div>
+              {processing && processOutput.length === 0 && (
+                <div className="animate-pulse-slow">Starting processing...</div>
               )}
             </div>
 

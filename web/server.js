@@ -44,12 +44,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Configuration constants
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || '50') * 1024 * 1024;
+const MAX_FILES = parseInt(process.env.MAX_FILES_PER_UPLOAD || '1');
+
 // Configure multer for file uploads
 const upload = multer({ 
   dest: path.join(__dirname, 'uploads'),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
-    files: 1 // Only 1 file per upload
+    fileSize: MAX_FILE_SIZE,
+    files: MAX_FILES
   },
   fileFilter: (req, file, cb) => {
     if (path.extname(file.originalname).toLowerCase() === '.geojson') {
@@ -72,27 +76,73 @@ async function ensureDir(dirPath) {
 // Upload boundaries.geojson
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
+    // Validate file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
     const { resortName } = req.body;
-    if (!resortName) {
+    if (!resortName || !resortName.trim()) {
       return res.status(400).json({ error: 'Resort name is required' });
     }
 
-    const resortDir = path.join(ROOT_DIR, 'data', resortName);
+    // Sanitize resort name
+    const sanitizedName = sanitizeResortName(resortName);
+    if (!sanitizedName) {
+      return res.status(400).json({ error: 'Invalid resort name. Use only letters, numbers, hyphens, and underscores.' });
+    }
+
+    const resortDir = path.join(ROOT_DIR, 'data', sanitizedName);
     await ensureDir(resortDir);
 
+    // Validate file size
+    if (req.file.size === 0) {
+      await fs.unlink(req.file.path);
+      return res.status(400).json({ error: 'Uploaded file is empty' });
+    }
+
     // Validate GeoJSON structure
-    const fileContent = await fs.readFile(req.file.path, 'utf8');
-    const geojson = JSON.parse(fileContent);
+    let fileContent, geojson;
+    try {
+      fileContent = await fs.readFile(req.file.path, 'utf8');
+    } catch (readError) {
+      await fs.unlink(req.file.path);
+      return res.status(400).json({ error: 'Could not read uploaded file' });
+    }
+
+    try {
+      geojson = JSON.parse(fileContent);
+    } catch (parseError) {
+      await fs.unlink(req.file.path);
+      return res.status(400).json({ error: 'Invalid JSON format' });
+    }
     
-    // Check for ski_area_boundary
-    const hasBoundary = geojson.features?.some(f => 
+    // Validate GeoJSON structure
+    if (!geojson.type || geojson.type !== 'FeatureCollection') {
+      await fs.unlink(req.file.path);
+      return res.status(400).json({ error: 'File must be a GeoJSON FeatureCollection' });
+    }
+
+    if (!Array.isArray(geojson.features) || geojson.features.length === 0) {
+      await fs.unlink(req.file.path);
+      return res.status(400).json({ error: 'GeoJSON must contain at least one feature' });
+    }
+
+    // Check for required zone types
+    const hasSkiAreaBoundary = geojson.features.some(f => 
       f.properties?.ZoneType === 'ski_area_boundary'
     );
+    const hasFeatureBoundary = geojson.features.some(f => 
+      f.properties?.ZoneType === 'feature_boundary'
+    );
     
-    if (!hasBoundary) {
+    if (!hasSkiAreaBoundary || !hasFeatureBoundary) {
       await fs.unlink(req.file.path);
+      const missing = [];
+      if (!hasSkiAreaBoundary) missing.push('ski_area_boundary');
+      if (!hasFeatureBoundary) missing.push('feature_boundary');
       return res.status(400).json({ 
-        error: 'GeoJSON must contain at least one feature with ZoneType: ski_area_boundary' 
+        error: `GeoJSON must contain features with ZoneType: ${missing.join(' and ')}` 
       });
     }
 
@@ -246,16 +296,38 @@ app.get('/api/process/:name', async (req, res) => {
     });
 
     pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        res.write(`data: ${JSON.stringify({ type: 'success', message: 'Processing completed successfully' })}\n\n`);
+      } else {
+        const errorMsg = `Processing failed with exit code ${code}. Check the output above for details.`;
+        res.write(`data: ${JSON.stringify({ type: 'error', message: errorMsg })}\n\n`);
+      }
       res.write(`data: ${JSON.stringify({ type: 'done', code })}\n\n`);
       res.end();
     });
 
     pythonProcess.on('error', (error) => {
-      res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+      const errorMsg = `Failed to start processing: ${error.message}`;
+      res.write(`data: ${JSON.stringify({ type: 'error', message: errorMsg })}\n\n`);
       res.end();
     });
+
+    // Handle client disconnect
+    req.on('close', () => {
+      if (!pythonProcess.killed) {
+        pythonProcess.kill();
+        console.log(`Terminated processing for ${resortName} due to client disconnect`);
+      }
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Process endpoint error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Internal server error', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Processing failed'
+      });
+    }
   }
 });
 

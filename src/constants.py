@@ -17,11 +17,22 @@ MAX_TREE_ATTEMPTS = 100          # Maximum attempts to place a single tree
 DEFAULT_MAX_TREES_PER_POLYGON = 40  # Default maximum trees per polygon
 MIN_TREES_PER_POLYGON = 1        # Minimum trees per polygon
 
+# Network and API configuration
+DEFAULT_OSM_BUFFER_DEGREES = 0.005   # ~500m buffer around boundaries for OSM data fetch
+DEFAULT_OSM_TIMEOUT = 30             # Timeout for OSM API requests in seconds
+DEFAULT_OSM_RETRY_DELAY = 5          # Delay between OSM API retries in seconds
+DEFAULT_OSM_MAX_RETRIES = 3          # Maximum number of OSM API retries
+
 # Area conversion constants
 HECTARE_TO_SQ_METERS = 10000     # 1 hectare = 10,000 square meters
 
 # Default random seed for reproducible results
 DEFAULT_RANDOM_SEED = 42
+
+# Memory optimization constants
+CHUNK_SIZE_FEATURES = 1000       # Process features in chunks of this size
+LARGE_DATASET_THRESHOLD = 5000   # Features threshold to enable chunked processing
+GC_INTERVAL = 500               # Trigger garbage collection every N processed features
 
 # Timestamp format
 TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"

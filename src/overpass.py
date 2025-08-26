@@ -9,6 +9,12 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 import requests
 from shapely.geometry import shape
+from .constants import (
+    DEFAULT_OSM_BUFFER_DEGREES, 
+    DEFAULT_OSM_TIMEOUT, 
+    DEFAULT_OSM_RETRY_DELAY,
+    DEFAULT_OSM_MAX_RETRIES
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +23,9 @@ class OverpassClient:
     """Client for fetching OSM data from Overpass API."""
     
     OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-    TIMEOUT = 30
-    RETRY_DELAY = 5
-    MAX_RETRIES = 3
+    TIMEOUT = DEFAULT_OSM_TIMEOUT
+    RETRY_DELAY = DEFAULT_OSM_RETRY_DELAY
+    MAX_RETRIES = DEFAULT_OSM_MAX_RETRIES
     
     def __init__(self):
         self.session = requests.Session()
@@ -224,7 +230,7 @@ def fetch_osm_features(resort_name: str, bounds: Tuple[float, float, float, floa
     
     # Fetch from Overpass API
     # Add buffer to bounds (approximately 500m)
-    buffer = 0.005  # ~500m in degrees at this latitude
+    buffer = DEFAULT_OSM_BUFFER_DEGREES
     buffered_bounds = (
         bounds[0] - buffer,
         bounds[1] - buffer,
