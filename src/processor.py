@@ -120,7 +120,8 @@ class ResortProcessor:
                 if temp_gdf.empty:
                     print(f"OSM features file is empty, fetching from Overpass API...")
                     should_fetch = True
-            except:
+            except (FileNotFoundError, ValueError, Exception) as e:
+                print(f"Unable to read OSM features file ({e}), fetching from Overpass API...")
                 should_fetch = True
         
         if should_fetch:
@@ -193,6 +194,25 @@ class ResortProcessor:
         
         return tree_count
     
+    def _calculate_area_in_sq_meters(self, geometry) -> float:
+        """Calculate geometry area in square meters using proper projection."""
+        if not geometry or geometry.is_empty:
+            return 0.0
+        
+        try:
+            # Ensure geometry is valid
+            if not geometry.is_valid:
+                geometry = geometry.buffer(0)  # Fix invalid geometry
+                if not geometry.is_valid:
+                    return 0.0
+            
+            temp_gdf = gpd.GeoDataFrame([1], geometry=[geometry], crs='EPSG:4326')
+            temp_gdf_proj = temp_gdf.to_crs('EPSG:3857')
+            return temp_gdf_proj.geometry.area.iloc[0]
+        except Exception as e:
+            print(f"Warning: Failed to calculate area for geometry: {e}")
+            return 0.0
+    
     def generate_random_points_in_polygon(self, polygon: Polygon, num_points: int) -> List[Point]:
         """Generate random points within a polygon using rejection sampling."""
         points = []
@@ -207,10 +227,17 @@ class ResortProcessor:
             y = random.uniform(min_y, max_y)
             point = Point(x, y)
             
-            if polygon.contains(point):
-                points.append(point)
+            try:
+                if polygon.is_valid and polygon.contains(point):
+                    points.append(point)
+            except Exception as e:
+                # Skip invalid geometry operations
+                continue
             
             attempts += 1
+        
+        if len(points) < num_points:
+            print(f"Warning: Only generated {len(points)} trees out of {num_points} requested (max attempts reached)")
         
         return points
     
@@ -270,7 +297,7 @@ class ResortProcessor:
             # Map leaf_type to standardized tree type
             leaf_type = row.get('leaf_type')
             leaf_cycle = row.get('leaf_cycle')
-            tree_type = self._map_tree_type(leaf_type, leaf_cycle, self.config.get('default_tree_type', 'tree:mixed'))
+            tree_type = self._map_tree_type(leaf_type, leaf_cycle, self.resort_config.get('default_tree_type', 'tree:mixed'))
             
             tree_feature = {
                 "type": "Feature",
@@ -303,9 +330,7 @@ class ResortProcessor:
                     continue
 
             # Calculate total area for the (potentially clipped) geometry
-            temp_gdf = gpd.GeoDataFrame([1], geometry=[geom], crs='EPSG:4326')
-            temp_gdf_proj = temp_gdf.to_crs('EPSG:3857')  # Web Mercator
-            total_area_sq_meters = temp_gdf_proj.geometry.area.iloc[0]
+            total_area_sq_meters = self._calculate_area_in_sq_meters(geom)
 
             # Calculate total tree count for this feature
             total_tree_count = self.calculate_tree_count(total_area_sq_meters)
@@ -325,9 +350,7 @@ class ResortProcessor:
 
                 for polygon in polygons:
                     if isinstance(polygon, Polygon):
-                        temp_poly_gdf = gpd.GeoDataFrame([1], geometry=[polygon], crs='EPSG:4326')
-                        temp_poly_proj = temp_poly_gdf.to_crs('EPSG:3857')
-                        poly_area = temp_poly_proj.geometry.area.iloc[0]
+                        poly_area = self._calculate_area_in_sq_meters(polygon)
                         polygon_areas.append(poly_area)
                         valid_polygons.append(polygon)
 
@@ -341,7 +364,7 @@ class ResortProcessor:
                 # Map leaf_type to standardized tree type
                 leaf_type = row.get('leaf_type')
                 leaf_cycle = row.get('leaf_cycle')
-                tree_type = self._map_tree_type(leaf_type, leaf_cycle, self.config.get('default_tree_type', 'tree:mixed'))
+                tree_type = self._map_tree_type(leaf_type, leaf_cycle, self.resort_config.get('default_tree_type', 'tree:mixed'))
 
                 for i, (polygon, poly_area) in enumerate(zip(valid_polygons, polygon_areas)):
                     # Calculate trees for this polygon
@@ -405,14 +428,12 @@ class ResortProcessor:
         for idx, row in clipped_forest_gdf.iterrows():
             # Calculate area
             geom = row.geometry
-            temp_gdf = gpd.GeoDataFrame([1], geometry=[geom], crs='EPSG:4326')
-            temp_gdf_proj = temp_gdf.to_crs('EPSG:3857')
-            area_sq_meters = temp_gdf_proj.geometry.area.iloc[0]
+            area_sq_meters = self._calculate_area_in_sq_meters(geom)
             
             # Map leaf_type to standardized tree type
             leaf_type = row.get('leaf_type')
             leaf_cycle = row.get('leaf_cycle')
-            tree_type = self._map_tree_type(leaf_type, leaf_cycle, self.config.get('default_tree_type', 'tree:mixed'))
+            tree_type = self._map_tree_type(leaf_type, leaf_cycle, self.resort_config.get('default_tree_type', 'tree:mixed'))
             
             feature = {
                 "type": "Feature",

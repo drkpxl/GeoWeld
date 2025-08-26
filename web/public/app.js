@@ -343,11 +343,11 @@ function App() {
 
         {/* Progress Steps */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 overflow-x-auto">
             {[1, 2, 3, 4, 5, 6].map((s) => (
-              <div key={s} className="flex items-center">
+              <div key={s} className="flex items-center flex-shrink-0">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-sm ${
                     step >= s
                       ? "bg-blue-500 text-white"
                       : "bg-gray-200 text-gray-500"
@@ -357,22 +357,22 @@ function App() {
                 </div>
                 {s < 6 && (
                   <div
-                    className={`w-full h-1 mx-2 ${
+                    className={`h-1 mx-1 sm:mx-2 ${
                       step > s ? "bg-blue-500" : "bg-gray-200"
                     }`}
-                    style={{ width: "60px" }}
+                    style={{ width: "30px" }}
                   ></div>
                 )}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-6 gap-2 text-xs text-center">
-            <div>Upload</div>
-            <div>Name</div>
-            <div>Configure</div>
-            <div>Process</div>
-            <div>Preview</div>
-            <div>Download</div>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 sm:gap-2 text-xs text-center">
+            <div className="sm:block">Upload</div>
+            <div className="sm:block">Name</div>
+            <div className="sm:block">Configure</div>
+            <div className="sm:block">Process</div>
+            <div className="sm:block">Preview</div>
+            <div className="sm:block">Download</div>
           </div>
         </div>
 

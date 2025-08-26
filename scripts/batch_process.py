@@ -40,7 +40,7 @@ def process_single_resort(resort_name: str, config_file: str, output_dir: str) -
             json.dump(output_geojson, f, indent=2)
         
         metadata = output_geojson['metadata']
-        message = f"✓ {metadata['total_features']} features ({metadata['tree_points']} trees)"
+        message = f"✓ {metadata['total_features']} features ({metadata['tree_points_total']} trees)"
         return (resort_name, True, message)
         
     except Exception as e:

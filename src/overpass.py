@@ -27,6 +27,19 @@ class OverpassClient:
             'User-Agent': 'GeoWeld/1.0 (ski resort processor)'
         })
     
+    def close(self):
+        """Close the requests session."""
+        if hasattr(self, 'session'):
+            self.session.close()
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensure session is closed."""
+        self.close()
+    
     def fetch_features(self, bounds: Tuple[float, float, float, float]) -> Dict:
         """
         Fetch OSM features within the given bounds.
@@ -210,8 +223,6 @@ def fetch_osm_features(resort_name: str, bounds: Tuple[float, float, float, floa
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     # Fetch from Overpass API
-    client = OverpassClient()
-    
     # Add buffer to bounds (approximately 500m)
     buffer = 0.005  # ~500m in degrees at this latitude
     buffered_bounds = (
@@ -222,7 +233,8 @@ def fetch_osm_features(resort_name: str, bounds: Tuple[float, float, float, floa
     )
     
     try:
-        geojson = client.fetch_features(buffered_bounds)
+        with OverpassClient() as client:
+            geojson = client.fetch_features(buffered_bounds)
         
         # Save to file
         with open(output_path, 'w') as f:

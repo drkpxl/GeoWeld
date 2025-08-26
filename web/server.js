@@ -14,6 +14,31 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.dirname(__dirname);
 
+// Input sanitization functions
+function sanitizeResortName(name) {
+  if (!name || typeof name !== 'string') {
+    return null;
+  }
+  // Only allow alphanumeric, hyphens, underscores
+  const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, '');
+  if (sanitized.length === 0 || sanitized.length > 50) {
+    return null;
+  }
+  return sanitized;
+}
+
+function sanitizeFileName(filename) {
+  if (!filename || typeof filename !== 'string') {
+    return null;
+  }
+  // Only allow alphanumeric, hyphens, underscores, and dots for extensions
+  const sanitized = filename.replace(/[^a-zA-Z0-9_.-]/g, '');
+  if (sanitized.length === 0 || sanitized.length > 100 || sanitized.includes('..')) {
+    return null;
+  }
+  return sanitized;
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -22,6 +47,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Configure multer for file uploads
 const upload = multer({ 
   dest: path.join(__dirname, 'uploads'),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+    files: 1 // Only 1 file per upload
+  },
   fileFilter: (req, file, cb) => {
     if (path.extname(file.originalname).toLowerCase() === '.geojson') {
       cb(null, true);
@@ -191,7 +220,10 @@ app.put('/api/resort/:name/config', async (req, res) => {
 // Process resort
 app.get('/api/process/:name', async (req, res) => {
   try {
-    const resortName = req.params.name;
+    const resortName = sanitizeResortName(req.params.name);
+    if (!resortName) {
+      return res.status(400).json({ error: 'Invalid resort name' });
+    }
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -267,7 +299,21 @@ app.get('/api/output/:resort', async (req, res) => {
 // Download file
 app.get('/api/download/:resort/:file', async (req, res) => {
   try {
-    const filePath = path.join(ROOT_DIR, 'output', req.params.resort, req.params.file);
+    const resortName = sanitizeResortName(req.params.resort);
+    const fileName = sanitizeFileName(req.params.file);
+    
+    if (!resortName || !fileName) {
+      return res.status(400).json({ error: 'Invalid resort name or file name' });
+    }
+    
+    const filePath = path.join(ROOT_DIR, 'output', resortName, fileName);
+    
+    // Ensure the resolved path is still within the expected directory
+    const resolvedPath = path.resolve(filePath);
+    const expectedDir = path.resolve(path.join(ROOT_DIR, 'output'));
+    if (!resolvedPath.startsWith(expectedDir)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     await fs.access(filePath);
     res.download(filePath);
   } catch (error) {
