@@ -15,9 +15,8 @@ __pycache__/
 output/
 
 # Large data files that Claude doesn't need to read
-data/*/*.geojson
-!data/*/boundaries.geojson
-# Keep boundary files readable for context
+data/*
+
 
 # IDE and editor files
 .idea/
