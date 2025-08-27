@@ -66,6 +66,14 @@
 
 <body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200 font-sans">
   <div id="root"></div>
+  
+  <!-- Load modular components in order -->
+  <script type="text/babel" src="api-services.js"></script>
+  <script type="text/babel" src="components.js"></script>
+  <script type="text/babel" src="dashboard.js"></script>
+  <script type="text/babel" src="data-management.js"></script>
+  <script type="text/babel" src="processing.js"></script>
+  <script type="text/babel" src="map-viewer.js"></script>
   <script type="text/babel" src="app.js"></script>
 </body>
 
