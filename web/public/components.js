@@ -99,7 +99,7 @@ const InfoCard = ({ title, value, icon, subtitle, onClick }) => {
 };
 
 // Header Component
-const Header = ({ toggleSidebar }) => {
+const Header = ({ toggleSidebar, sidebarOpen }) => {
   const { darkMode, toggleDarkMode } = useTheme();
 
   return (
@@ -109,6 +109,9 @@ const Header = ({ toggleSidebar }) => {
           <button
             onClick={toggleSidebar}
             className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors lg:hidden"
+            aria-label="Toggle navigation"
+            aria-controls="sidebar"
+            aria-expanded={sidebarOpen}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -126,6 +129,8 @@ const Header = ({ toggleSidebar }) => {
           onClick={toggleDarkMode}
           className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-pressed={darkMode}
         >
           {darkMode ? (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,6 +156,18 @@ const Sidebar = ({ isOpen, toggleSidebar, activeTab, setActiveTab }) => {
     { id: 'view', icon: '🗺️', label: 'View Results' },
   ];
 
+  // Close sidebar with Escape key for better accessibility
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        toggleSidebar();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, toggleSidebar]);
+
   return (
     <>
       {isOpen && (
@@ -161,19 +178,13 @@ const Sidebar = ({ isOpen, toggleSidebar, activeTab, setActiveTab }) => {
       )}
       
       <aside
+        id="sidebar"
         className={`fixed inset-y-0 left-0 z-30 w-64 transform bg-white dark:bg-gray-800 shadow-lg transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-center h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-            <span className="text-2xl">⛰️</span>
-            <span className="ml-2 text-xl font-bold text-gray-800 dark:text-white">
-              GeoWeld
-            </span>
-          </div>
-
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className="flex-1 px-4 py-6 space-y-2" aria-label="Main">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -188,6 +199,7 @@ const Sidebar = ({ isOpen, toggleSidebar, activeTab, setActiveTab }) => {
                     ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
               >
                 <span className="text-xl mr-3">{tab.icon}</span>
                 <span className="font-medium">{tab.label}</span>
