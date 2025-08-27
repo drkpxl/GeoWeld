@@ -128,20 +128,20 @@ const Dashboard = ({
               📁 Upload New Resort Data
             </Button>
             <Button
-              onClick={() => setActiveTab('view')}
+              onClick={() => setActiveTab('configure')}
               variant="primary"
+              className="w-full justify-center"
+              disabled={resorts.length === 0}
+            >
+              ⚙️ Configure & Process Resort
+            </Button>
+            <Button
+              onClick={() => setActiveTab('view')}
+              variant="outline"
               className="w-full justify-center"
               disabled={Object.keys(outputs).length === 0}
             >
               🗺️ Open Map Viewer
-            </Button>
-            <Button
-              onClick={() => setActiveTab('process')}
-              variant="secondary"
-              className="w-full justify-center"
-              disabled={processing}
-            >
-              {processing ? '⏯️ Processing...' : '⚙️ Process Resort'}
             </Button>
           </div>
         </Card>

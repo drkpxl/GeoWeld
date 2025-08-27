@@ -147,8 +147,7 @@ const Sidebar = ({ isOpen, toggleSidebar, activeTab, setActiveTab }) => {
   const tabs = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
     { id: 'upload', icon: '📁', label: 'Upload Data' },
-    { id: 'configure', icon: '⚙️', label: 'Configure' },
-    { id: 'process', icon: '🔄', label: 'Process' },
+    { id: 'configure', icon: '⚙️', label: 'Configure & Process' },
     { id: 'view', icon: '🗺️', label: 'View Results' },
   ];
 

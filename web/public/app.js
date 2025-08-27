@@ -121,20 +121,14 @@ function App() {
               config={config}
               setConfig={setConfig}
               setActiveTab={setActiveTab}
-            />
-          )}
-
-          {activeTab === 'process' && (
-            <window.ProcessingTab
-              selectedResort={selectedResort}
               processing={processing}
               setProcessing={setProcessing}
               processOutput={processOutput}
               setProcessOutput={setProcessOutput}
               loadOutputs={reloadData}
-              setActiveTab={setActiveTab}
             />
           )}
+
 
           {activeTab === 'view' && (
             <window.MapViewer

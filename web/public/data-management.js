@@ -131,12 +131,20 @@ const ConfigureTab = ({
   setSelectedResort, 
   config, 
   setConfig, 
-  setActiveTab 
+  setActiveTab,
+  processing,
+  setProcessing,
+  processOutput,
+  setProcessOutput,
+  loadOutputs
 }) => {
+  const [configSaved, setConfigSaved] = useState(false);
+
   const handleUpdateConfig = async () => {
     try {
       await updateConfig(selectedResort, config);
-      alert("Configuration updated successfully!");
+      setConfigSaved(true);
+      // Don't show alert, just enable the process button
     } catch (err) {
       alert("Error updating config: " + err.message);
     }
@@ -145,6 +153,7 @@ const ConfigureTab = ({
   const handleResortChange = async (e) => {
     const resort = e.target.value;
     setSelectedResort(resort);
+    setConfigSaved(false); // Reset saved status when changing resorts
     if (resort) {
       try {
         const configData = await loadConfig(resort);
@@ -155,14 +164,49 @@ const ConfigureTab = ({
     }
   };
 
+  const processResort = async () => {
+    if (!selectedResort) return;
+    
+    setProcessing(true);
+    setProcessOutput([]);
+    
+    const onMessage = (data) => {
+      setProcessOutput((prev) => [...prev, data]);
+    };
+    
+    const onComplete = (data) => {
+      setProcessing(false);
+      if (data.code === 0) {
+        loadOutputs();
+        setActiveTab('view');
+      }
+    };
+    
+    const onError = () => {
+      setProcessing(false);
+    };
+
+    try {
+      window.ApiServices.createProcessStream(selectedResort, onMessage, onComplete, onError);
+    } catch (error) {
+      setProcessing(false);
+    }
+  };
+
+  // Reset config saved status when config changes
+  const handleConfigChange = (newConfig) => {
+    setConfig(newConfig);
+    setConfigSaved(false);
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Configure Resort
+          Configure & Process Resort
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Select a resort and adjust tree generation parameters
+          Configure tree generation parameters and process the resort data
         </p>
       </div>
 
@@ -190,7 +234,7 @@ const ConfigureTab = ({
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">Tree Type</h4>
                 <select
                   value={config.default_tree_type}
-                  onChange={(e) => setConfig({...config, default_tree_type: e.target.value})}
+                  onChange={(e) => handleConfigChange({...config, default_tree_type: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="tree:mixed">Mixed Forest</option>
@@ -215,7 +259,7 @@ const ConfigureTab = ({
                     <input
                       type="number"
                       value={config.tree_config[key]}
-                      onChange={(e) => setConfig({
+                      onChange={(e) => handleConfigChange({
                         ...config,
                         tree_config: {
                           ...config.tree_config,
@@ -231,16 +275,40 @@ const ConfigureTab = ({
           )}
 
           {selectedResort && config && (
-            <div className="flex space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <Button onClick={handleUpdateConfig}>
-                Save Configuration
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setActiveTab('process')}
-              >
-                Proceed to Processing
-              </Button>
+            <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex space-x-4">
+                  <Button onClick={handleUpdateConfig} disabled={configSaved}>
+                    {configSaved ? '✓ Configuration Saved' : 'Save Configuration'}
+                  </Button>
+                  <Button
+                    onClick={processResort}
+                    disabled={processing || !configSaved}
+                    variant={processing ? "secondary" : "primary"}
+                  >
+                    {processing ? "Processing..." : "🔄 Process Resort"}
+                  </Button>
+                </div>
+                {!configSaved && (
+                  <span className="text-sm text-orange-600 dark:text-orange-400">
+                    Save configuration to enable processing
+                  </span>
+                )}
+              </div>
+
+              {processOutput.length > 0 && (
+                <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto">
+                  {processOutput.map((output, i) => (
+                    <div key={i} className={`mb-1 ${
+                      output.type === 'error' ? 'text-red-400' : 
+                      output.type === 'success' ? 'text-green-400' : 
+                      'text-gray-300'
+                    }`}>
+                      {output.message}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
