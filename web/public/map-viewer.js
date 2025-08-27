@@ -320,7 +320,9 @@ const MapViewer = ({
         </div>
         
         <div className="flex space-x-4">
+          <label htmlFor="resort-select" className="sr-only">Select Resort</label>
           <select
+            id="resort-select"
             value={selectedResort}
             onChange={handleResortSelection}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -333,24 +335,30 @@ const MapViewer = ({
         </div>
       </div>
 
-      {selectedResort && outputs[selectedResort] && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Download Files - {selectedResort}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {outputs[selectedResort].map((file) => (
-              <Button
-                key={file}
-                variant="outline"
-                onClick={() => downloadFile(selectedResort, file)}
-                className="justify-start"
-              >
-                📄 {file}
-              </Button>
-            ))}
-          </div>
-        </Card>
+      {selectedResort && (
+        outputs[selectedResort] ? (
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Download Files - {selectedResort}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {outputs[selectedResort].map((file) => (
+                <Button
+                  key={file}
+                  variant="outline"
+                  onClick={() => downloadFile(selectedResort, file)}
+                  className="justify-start"
+                  aria-label={`Download ${file}`}
+                  title={`Download ${file}`}
+                >
+                  📄 {file}
+                </Button>
+              ))}
+            </div>
+          </Card>
+        ) : (
+          <p className="text-gray-600 dark:text-gray-400">No processed files available for download.</p>
+        )
       )}
 
       {featureStats && (
@@ -394,7 +402,12 @@ const MapViewer = ({
             )}
           </div>
           
-          <div ref={mapContainer} className="w-full h-96 rounded-lg border border-gray-200 dark:border-gray-700" />
+          <div
+            ref={mapContainer}
+            className="w-full h-96 rounded-lg border border-gray-200 dark:border-gray-700"
+            role="region"
+            aria-label={selectedResort ? `${selectedResort} map` : 'Resort map'}
+          />
           
           {/* Legend */}
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
@@ -429,7 +442,7 @@ const MapViewer = ({
           </div>
           
           {selectedFeature && (
-            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg" aria-live="polite">
               <h4 className="font-medium text-gray-900 dark:text-white mb-2">Selected Feature</h4>
               <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                 <div><strong>Type:</strong> {selectedFeature.properties.type || 'Unknown'}</div>

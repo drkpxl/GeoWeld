@@ -39,6 +39,18 @@ function App() {
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
+  // Update document title based on active tab
+  useEffect(() => {
+    const titles = {
+      dashboard: 'Dashboard',
+      upload: 'Upload Data',
+      configure: 'Configure & Process',
+      view: 'View Results',
+    };
+    const section = titles[activeTab];
+    document.title = section ? `GeoWeld Resort Processor - ${section}` : 'GeoWeld Resort Processor';
+  }, [activeTab]);
+
   // Load initial data
   useEffect(() => {
     const initializeApp = async () => {
@@ -74,7 +86,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar 
+      <Sidebar
         isOpen={sidebarOpen}
         toggleSidebar={toggleSidebar}
         activeTab={activeTab}
@@ -82,9 +94,9 @@ function App() {
       />
 
       <div className="flex flex-col flex-1 lg:ml-64">
-        <Header toggleSidebar={toggleSidebar} />
+        <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main id="main-content" tabIndex="-1" className="flex-1 overflow-y-auto p-6">
           {activeTab === 'dashboard' && (
             <window.Dashboard 
               resorts={resorts}

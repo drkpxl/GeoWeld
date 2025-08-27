@@ -57,38 +57,43 @@ const UploadTab = ({
       <Card className="p-6">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="resort-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Resort Name
             </label>
             <input
+              id="resort-name"
               type="text"
               value={resortName}
               onChange={(e) => setResortName(e.target.value)}
               placeholder="Enter resort name (e.g., Stratton Mountain)"
+              required
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="boundary-file" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Boundary File (.geojson)
             </label>
             <input
+              id="boundary-file"
               ref={fileInput}
               type="file"
               accept=".geojson"
               onChange={handleFileUploadWrapper}
+              required
+              aria-describedby="file-requirements"
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
             />
           </div>
 
           {uploadError && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div role="alert" aria-live="polite" className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-red-600 dark:text-red-400 text-sm">{uploadError}</p>
             </div>
           )}
 
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div id="file-requirements" className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">File Requirements:</h4>
             <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
               <li>• Must be a valid GeoJSON FeatureCollection</li>
@@ -213,10 +218,11 @@ const ConfigureTab = ({
       <Card className="p-6">
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="config-resort" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Select Resort
             </label>
             <select
+              id="config-resort"
               value={selectedResort}
               onChange={handleResortChange}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -231,8 +237,9 @@ const ConfigureTab = ({
           {selectedResort && config && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Tree Type</h4>
+                <label htmlFor="tree-type" className="block font-medium text-gray-900 dark:text-white mb-3">Tree Type</label>
                 <select
+                  id="tree-type"
                   value={config.default_tree_type}
                   onChange={(e) => handleConfigChange({...config, default_tree_type: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -253,10 +260,11 @@ const ConfigureTab = ({
                   'Max Trees per Polygon': 'max_trees_per_polygon'
                 }).map(([label, key]) => (
                   <div key={key}>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor={`density-${key}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {label}
                     </label>
                     <input
+                      id={`density-${key}`}
                       type="number"
                       value={config.tree_config[key]}
                       onChange={(e) => handleConfigChange({
@@ -285,6 +293,7 @@ const ConfigureTab = ({
                     onClick={processResort}
                     disabled={processing || !configSaved}
                     variant={processing ? "secondary" : "primary"}
+                    aria-busy={processing}
                   >
                     {processing ? "Processing..." : "🔄 Process Resort"}
                   </Button>
@@ -297,13 +306,20 @@ const ConfigureTab = ({
               </div>
 
               {processOutput.length > 0 && (
-                <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto">
+                <div
+                  className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto"
+                  role="log"
+                  aria-live="polite"
+                >
                   {processOutput.map((output, i) => (
-                    <div key={i} className={`mb-1 ${
-                      output.type === 'error' ? 'text-red-400' : 
-                      output.type === 'success' ? 'text-green-400' : 
-                      'text-gray-300'
-                    }`}>
+                    <div
+                      key={i}
+                      className={`mb-1 ${
+                        output.type === 'error' ? 'text-red-400' :
+                        output.type === 'success' ? 'text-green-400' :
+                        'text-gray-300'
+                      }`}
+                    >
                       {output.message}
                     </div>
                   ))}
