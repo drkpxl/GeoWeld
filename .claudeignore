@@ -60,10 +60,14 @@ coverage.xml
 # Node modules (if any JavaScript tools are added later)
 node_modules/
 web/node_modules/
+package-lock.json
 
 ## Build Files
 web/build/
 web/uploads/
+
+## Assets
+web/assets/
 
 # Claude's own configuration should be readable
 !.claude/
