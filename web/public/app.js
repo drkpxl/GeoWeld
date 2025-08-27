@@ -369,29 +369,72 @@ function App() {
       map.current.remove();
     }
 
-    mapboxgl.accessToken = mapboxToken;
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/outdoors-v12',
-      center: [-72.908, 43.117],
-      zoom: 12
-    });
-
-    map.current.on('load', () => {
-      // Calculate bounds
-      const bounds = new mapboxgl.LngLatBounds();
-      mapData.features.forEach(feature => {
-        if (feature.geometry.type === 'Point') {
-          bounds.extend(feature.geometry.coordinates);
-        } else if (feature.geometry.coordinates) {
-          const coords = feature.geometry.type === 'Polygon' 
-            ? feature.geometry.coordinates[0]
-            : feature.geometry.coordinates.flat(2);
-          coords.forEach(coord => {
-            if (coord.length === 2) bounds.extend(coord);
-          });
-        }
+    // Ensure container has proper dimensions before initializing map
+    const container = mapContainer.current;
+    container.style.minHeight = '400px';
+    container.style.height = '400px';
+    container.style.width = '100%';
+    
+    // Small delay to ensure container is rendered with proper dimensions
+    setTimeout(() => {
+      mapboxgl.accessToken = mapboxToken;
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/outdoors-v12',
+        center: [-72.908, 43.117],
+        zoom: 12
       });
+
+      // Immediately resize after creation
+      setTimeout(() => {
+        if (map.current) {
+          map.current.resize();
+        }
+      }, 50);
+
+      map.current.on('load', () => {
+      // Force map resize to ensure proper container dimensions
+      setTimeout(() => {
+        if (map.current) {
+          map.current.resize();
+        }
+      }, 100);
+
+      // Calculate bounds with proper validation
+      const bounds = new mapboxgl.LngLatBounds();
+      let hasValidBounds = false;
+
+      if (mapData && mapData.features && mapData.features.length > 0) {
+        mapData.features.forEach(feature => {
+          try {
+            if (feature.geometry && feature.geometry.coordinates) {
+              if (feature.geometry.type === 'Point') {
+                const coord = feature.geometry.coordinates;
+                if (Array.isArray(coord) && coord.length >= 2 && 
+                    typeof coord[0] === 'number' && typeof coord[1] === 'number' &&
+                    !isNaN(coord[0]) && !isNaN(coord[1])) {
+                  bounds.extend(coord);
+                  hasValidBounds = true;
+                }
+              } else if (feature.geometry.type === 'Polygon') {
+                const coords = feature.geometry.coordinates[0]; // Get exterior ring
+                if (Array.isArray(coords)) {
+                  coords.forEach(coord => {
+                    if (Array.isArray(coord) && coord.length >= 2 && 
+                        typeof coord[0] === 'number' && typeof coord[1] === 'number' &&
+                        !isNaN(coord[0]) && !isNaN(coord[1])) {
+                      bounds.extend(coord);
+                      hasValidBounds = true;
+                    }
+                  });
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Error processing feature bounds:', error);
+          }
+        });
+      }
 
       // Add the data source
       map.current.addSource('resort-data', {
@@ -399,7 +442,6 @@ function App() {
         data: mapData,
       });
 
-      // Add layers for different feature types with proper styling
       // Boundaries (ski area and feature boundaries)
       map.current.addLayer({
         id: "boundaries",
@@ -548,18 +590,29 @@ function App() {
         });
       });
 
-      // Fit to bounds with padding
-      if (!bounds.isEmpty()) {
-        map.current.fitBounds(bounds, { padding: 50 });
-      }
+      // Use default A-Basin coordinates instead of automatic bounds fitting
+      // This prevents the "narrow silver" display issue
+      console.log('Setting default A-Basin view');
+      map.current.setCenter([-105.8717, 39.6403]); // A-Basin coordinates
+      map.current.setZoom(13);
+      
+      // Additional resize call after everything is loaded
+      setTimeout(() => {
+        if (map.current) {
+          map.current.resize();
+          map.current.setCenter([-105.8717, 39.6403]);
+          map.current.setZoom(13);
+        }
+      }, 500);
     });
 
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
+      return () => {
+        if (map.current) {
+          map.current.remove();
+          map.current = null;
+        }
+      };
+    }, 100); // Close the main setTimeout
   }, [showMap, mapData, mapboxToken]);
 
   const downloadFile = (resort, file) => {
