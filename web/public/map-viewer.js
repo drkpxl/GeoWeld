@@ -195,31 +195,32 @@ const MapViewer = ({
           },
         });
 
-        // Individual trees (points) - using custom sprites
+        // Individual trees (points) - using colored circles
         map.current.addLayer({
           id: "trees",
-          type: "symbol",
+          type: "circle",
           source: "resort-data",
           filter: [
             "all",
             ["in", ["get", "type"], ["literal", ["tree:needle", "tree:broad", "tree:mixed"]]],
             ["==", ["geometry-type"], "Point"]
           ],
-          layout: {
-            "icon-image": [
+          paint: {
+            "circle-radius": [
               "case",
-              ["==", ["get", "type"], "tree:needle"], "tree-needle-001",
-              ["==", ["get", "type"], "tree:broad"], "tree-broad-snow-001", 
-              ["==", ["get", "type"], "tree:mixed"], "tree-needle-001", // Use needle as default for mixed
-              "tree-needle-001" // Default fallback
+              ["==", ["get", "source"], "osm"], 6, // OSM trees slightly larger
+              4 // Generated trees normal size
             ],
-            "icon-size": [
+            "circle-color": [
               "case",
-              ["==", ["get", "source"], "osm"], 1.2, // OSM trees slightly larger
-              1.0 // Generated trees normal size
+              ["==", ["get", "type"], "tree:needle"], "#2E7D32", // Dark green for needle trees
+              ["==", ["get", "type"], "tree:broad"], "#4CAF50", // Light green for broad trees
+              ["==", ["get", "type"], "tree:mixed"], "#388E3C", // Medium green for mixed
+              "#2E7D32" // Default dark green
             ],
-            "icon-allow-overlap": true,
-            "icon-ignore-placement": true
+            "circle-stroke-color": "#1B5E20",
+            "circle-stroke-width": 1,
+            "circle-opacity": 0.8
           }
         });
 
@@ -265,18 +266,34 @@ const MapViewer = ({
           });
         });
 
-        // Use default A-Basin coordinates instead of automatic bounds fitting
-        // This prevents the "narrow silver" display issue
-        console.log('Setting default A-Basin view');
-        map.current.setCenter([-105.8717, 39.6403]); // A-Basin coordinates
-        map.current.setZoom(13);
+        // Fit map to actual data bounds if available
+        if (hasValidBounds) {
+          try {
+            map.current.fitBounds(bounds, {
+              padding: { top: 50, bottom: 50, left: 50, right: 50 },
+              maxZoom: 15
+            });
+          } catch (error) {
+            console.warn('Error fitting bounds, using fallback coordinates');
+            // Fallback to center of data or default coordinates
+            const center = bounds.getCenter();
+            if (center && !isNaN(center.lng) && !isNaN(center.lat)) {
+              map.current.setCenter([center.lng, center.lat]);
+              map.current.setZoom(13);
+            } else {
+              map.current.setCenter([-105.8717, 39.6403]); // A-Basin fallback
+              map.current.setZoom(13);
+            }
+          }
+        } else {
+          map.current.setCenter([-105.8717, 39.6403]); // A-Basin fallback
+          map.current.setZoom(13);
+        }
         
         // Additional resize call after everything is loaded
         setTimeout(() => {
           if (map.current) {
             map.current.resize();
-            map.current.setCenter([-105.8717, 39.6403]);
-            map.current.setZoom(13);
           }
         }, 500);
       });
@@ -380,7 +397,7 @@ const MapViewer = ({
           <div ref={mapContainer} className="w-full h-96 rounded-lg border border-gray-200 dark:border-gray-700" />
           
           {/* Legend */}
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-blue-500 bg-opacity-20 border border-blue-500 rounded"></div>
               <span className="text-gray-700 dark:text-gray-300">Ski Boundary</span>
@@ -392,6 +409,10 @@ const MapViewer = ({
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-green-600 bg-opacity-40 border border-green-800 rounded"></div>
               <span className="text-gray-700 dark:text-gray-300">Forest</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-green-700 rounded-full border border-green-900"></div>
+              <span className="text-gray-700 dark:text-gray-300">Trees</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 bg-yellow-500 bg-opacity-30 border border-yellow-600 rounded"></div>
