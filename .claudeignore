@@ -15,7 +15,7 @@ __pycache__/
 output/
 
 # Large data files that Claude doesn't need to read
-data/*
+data/
 
 
 # IDE and editor files
@@ -59,6 +59,11 @@ coverage.xml
 
 # Node modules (if any JavaScript tools are added later)
 node_modules/
+web/node_modules/
+
+## Build Files
+web/build/
+web/uploads/
 
 # Claude's own configuration should be readable
 !.claude/
