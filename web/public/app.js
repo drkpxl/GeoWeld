@@ -22,6 +22,23 @@ function App() {
   // Selected resort and configuration state
   const [selectedResort, setSelectedResort] = useState("");
   const [config, setConfig] = useState(null);
+
+  // URL parameter parsing and state synchronization
+  const parseUrlParams = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return {
+      tab: urlParams.get('tab'),
+      resort: urlParams.get('resort')
+    };
+  };
+
+  const updateUrl = (tab, resort = null) => {
+    const url = new URL(window.location);
+    if (tab) url.searchParams.set('tab', tab);
+    if (resort) url.searchParams.set('resort', resort);
+    else url.searchParams.delete('resort');
+    window.history.pushState({}, '', url.toString());
+  };
   
   // Upload state
   const [resortName, setResortName] = useState("");
@@ -39,6 +56,17 @@ function App() {
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
+  // Enhanced state setters that also update URL
+  const setActiveTabWithUrl = (tab) => {
+    setActiveTab(tab);
+    updateUrl(tab, selectedResort || null);
+  };
+
+  const setSelectedResortWithUrl = (resort) => {
+    setSelectedResort(resort);
+    updateUrl(activeTab, resort || null);
+  };
+
   // Update document title based on active tab
   useEffect(() => {
     const titles = {
@@ -51,7 +79,7 @@ function App() {
     document.title = section ? `GeoWeld Resort Processor - ${section}` : 'GeoWeld Resort Processor';
   }, [activeTab]);
 
-  // Load initial data
+  // Load initial data and handle URL parameters
   useEffect(() => {
     const initializeApp = async () => {
       try {
@@ -63,12 +91,51 @@ function App() {
         setResorts(resortsData);
         setOutputs(outputsData);
         setMapboxToken(token);
+        
+        // Parse URL parameters and set initial state
+        const { tab, resort } = parseUrlParams();
+        if (tab && ['dashboard', 'upload', 'configure', 'view'].includes(tab)) {
+          setActiveTab(tab);
+        }
+        if (resort && resortsData.includes(resort)) {
+          setSelectedResort(resort);
+          // If we have a resort parameter and we're on the view tab, load map data
+          if (tab === 'view' && outputsData[resort]) {
+            try {
+              const { loadMapData, calculateFeatureStats } = window.ApiServices;
+              const data = await loadMapData(resort);
+              setMapData(data);
+              setFeatureStats(calculateFeatureStats(data));
+              setShowMap(true);
+            } catch (err) {
+              console.error("Error loading map data from URL:", err);
+            }
+          }
+        }
       } catch (err) {
         console.error("Error initializing app:", err);
       }
     };
     initializeApp();
   }, []);
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const { tab, resort } = parseUrlParams();
+      if (tab && ['dashboard', 'upload', 'configure', 'view'].includes(tab)) {
+        setActiveTab(tab);
+      }
+      if (resort && resorts.includes(resort)) {
+        setSelectedResort(resort);
+      } else if (!resort) {
+        setSelectedResort('');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [resorts]);
 
   // Helper function to reload data after changes
   const reloadData = async () => {
@@ -90,7 +157,7 @@ function App() {
         isOpen={sidebarOpen}
         toggleSidebar={toggleSidebar}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={setActiveTabWithUrl}
       />
 
       <div className="flex flex-col flex-1 lg:ml-64">
@@ -102,8 +169,8 @@ function App() {
               resorts={resorts}
               outputs={outputs}
               processing={processing}
-              setActiveTab={setActiveTab}
-              setSelectedResort={setSelectedResort}
+              setActiveTab={setActiveTabWithUrl}
+              setSelectedResort={setSelectedResortWithUrl}
               setConfig={setConfig}
               setMapData={setMapData}
               setFeatureStats={setFeatureStats}
@@ -118,10 +185,10 @@ function App() {
               setResortName={setResortName}
               uploadError={uploadError}
               setUploadError={setUploadError}
-              setSelectedResort={setSelectedResort}
+              setSelectedResort={setSelectedResortWithUrl}
               loadResorts={reloadData}
               setConfig={setConfig}
-              setActiveTab={setActiveTab}
+              setActiveTab={setActiveTabWithUrl}
               resorts={resorts}
             />
           )}
@@ -130,10 +197,10 @@ function App() {
             <window.DataManagement.ConfigureTab
               resorts={resorts}
               selectedResort={selectedResort}
-              setSelectedResort={setSelectedResort}
+              setSelectedResort={setSelectedResortWithUrl}
               config={config}
               setConfig={setConfig}
-              setActiveTab={setActiveTab}
+              setActiveTab={setActiveTabWithUrl}
               processing={processing}
               setProcessing={setProcessing}
               processOutput={processOutput}
@@ -147,7 +214,7 @@ function App() {
             <window.MapViewer
               resorts={resorts}
               selectedResort={selectedResort}
-              setSelectedResort={setSelectedResort}
+              setSelectedResort={setSelectedResortWithUrl}
               outputs={outputs}
               mapboxToken={mapboxToken}
               mapData={mapData}
