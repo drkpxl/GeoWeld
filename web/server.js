@@ -180,7 +180,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
           trees_per_medium_hectare: 40,
           trees_per_large_hectare: 100,
           trees_per_extra_large_hectare: 300,
-          max_trees_per_polygon: 40,
+          max_trees_per_polygon: 300,
           min_trees_per_polygon: 1,
           random_seed: 42
         }

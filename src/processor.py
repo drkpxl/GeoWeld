@@ -741,13 +741,8 @@ class ResortProcessor:
         """Process a single forest geometry and generate tree features."""
         tree_features = []
         
-        # Clip to feature boundary if needed
-        if self.feature_boundary is not None:
-            geometry = geometry.intersection(self.feature_boundary)
-            if geometry.is_empty:
-                return tree_features
-        
-        # Calculate area and tree count
+        # Since geometry is already clipped in process_forest_features, 
+        # we don't need to clip again here. Just calculate area directly.
         total_area_sq_meters = self._calculate_area_in_sq_meters(geometry)
         total_tree_count = self.calculate_tree_count(total_area_sq_meters)
         
