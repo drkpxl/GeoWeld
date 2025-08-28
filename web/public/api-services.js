@@ -193,6 +193,17 @@ const fetchMapboxToken = async () => {
   }
 };
 
+const loadConstants = async () => {
+  try {
+    const res = await fetch(`${API_URL}/api/constants`);
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error("Error loading constants:", err);
+    throw err;
+  }
+};
+
 // Feature Statistics Calculation
 const calculateFeatureStats = (geoJsonData) => {
   if (!geoJsonData?.features) return null;
@@ -269,5 +280,6 @@ window.ApiServices = {
   createProcessStream,
   loadMapData,
   fetchMapboxToken,
+  loadConstants,
   calculateFeatureStats
 };

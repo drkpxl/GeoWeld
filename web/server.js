@@ -164,27 +164,54 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 
     if (!config[resortName]) {
-      config[resortName] = {
-        name: `${resortName.charAt(0).toUpperCase() + resortName.slice(1)} Resort`,
-        data_files: {
-          boundaries: `data/${resortName}/boundaries.geojson`,
-          osm_features: `data/${resortName}/osm_features.geojson`
-        },
-        default_tree_type: 'tree:mixed',  // Default fallback tree type
-        tree_config: {
-          min_area_for_trees: 5000,
-          small_area_threshold: 25000,
-          medium_area_threshold: 100000,
-          large_area_threshold: 200000,
-          trees_per_small_hectare: 5,
-          trees_per_medium_hectare: 40,
-          trees_per_large_hectare: 100,
-          trees_per_extra_large_hectare: 300,
-          max_trees_per_polygon: 300,
-          min_trees_per_polygon: 1,
-          random_seed: 42
-        }
-      };
+      // Get constants from Python to ensure consistency
+      const constantsProcess = spawn('python3', [
+        path.join(ROOT_DIR, 'scripts', 'export_constants.py')
+      ], {
+        cwd: ROOT_DIR
+      });
+
+      let constantsOutput = '';
+      constantsProcess.stdout.on('data', (data) => {
+        constantsOutput += data.toString();
+      });
+
+      await new Promise((resolve, reject) => {
+        constantsProcess.on('close', (code) => {
+          if (code === 0) {
+            try {
+              const constants = JSON.parse(constantsOutput);
+              config[resortName] = {
+                name: `${resortName.charAt(0).toUpperCase() + resortName.slice(1)} Resort`,
+                data_files: {
+                  boundaries: `data/${resortName}/boundaries.geojson`,
+                  osm_features: `data/${resortName}/osm_features.geojson`
+                },
+                default_tree_type: 'tree:mixed',  // Default fallback tree type
+                tree_config: {
+                  min_area_for_trees: constants.area_thresholds.small_area_threshold / 2,
+                  small_area_threshold: constants.area_thresholds.small_area_threshold,
+                  medium_area_threshold: constants.area_thresholds.medium_area_threshold,
+                  large_area_threshold: constants.area_thresholds.large_area_threshold,
+                  extra_large_area_threshold: constants.area_thresholds.extra_large_area_threshold,
+                  trees_per_small_hectare: constants.tree_densities.trees_per_small_hectare,
+                  trees_per_medium_hectare: constants.tree_densities.trees_per_medium_hectare,
+                  trees_per_large_hectare: constants.tree_densities.trees_per_large_hectare,
+                  trees_per_extra_large_hectare: constants.tree_densities.trees_per_extra_large_hectare,
+                  max_trees_per_polygon: constants.limits.max_trees_per_polygon,
+                  min_trees_per_polygon: constants.limits.min_trees_per_polygon,
+                  random_seed: constants.defaults.random_seed
+                }
+              };
+              resolve();
+            } catch (parseError) {
+              reject(new Error('Failed to parse constants for new resort config'));
+            }
+          } else {
+            reject(new Error('Failed to load constants for new resort config'));
+          }
+        });
+      });
       
       await fs.writeFile(configPath, yaml.dump(config), 'utf8');
     }
@@ -534,6 +561,41 @@ app.delete('/api/resort/:name', async (req, res) => {
     console.error('Delete resort error:', error);
     res.status(500).json({ error: 'Failed to delete resort' });
   }
+});
+
+// Get constants from Python
+app.get('/api/constants', (req, res) => {
+  const pythonProcess = spawn('python3', [
+    path.join(ROOT_DIR, 'scripts', 'export_constants.py')
+  ], {
+    cwd: ROOT_DIR
+  });
+
+  let output = '';
+  let error = '';
+
+  pythonProcess.stdout.on('data', (data) => {
+    output += data.toString();
+  });
+
+  pythonProcess.stderr.on('data', (data) => {
+    error += data.toString();
+  });
+
+  pythonProcess.on('close', (code) => {
+    if (code === 0) {
+      try {
+        const constants = JSON.parse(output);
+        res.json(constants);
+      } catch (parseError) {
+        console.error('Error parsing constants JSON:', parseError);
+        res.status(500).json({ error: 'Failed to parse constants' });
+      }
+    } else {
+      console.error('Error getting constants:', error);
+      res.status(500).json({ error: 'Failed to load constants' });
+    }
+  });
 });
 
 // Get Mapbox token

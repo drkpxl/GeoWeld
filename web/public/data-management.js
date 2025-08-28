@@ -1,7 +1,7 @@
 // Data Management Components (Upload & Configure) for GeoWeld Resort Processor
 const { useState, useRef } = React;
 const { Button, Card } = window.Components;
-const { handleFileUpload, loadConfig, updateConfig } = window.ApiServices;
+const { handleFileUpload, loadConfig, updateConfig, loadConstants } = window.ApiServices;
 
 // Upload Tab Component
 const UploadTab = ({ 
@@ -144,6 +144,20 @@ const ConfigureTab = ({
   loadOutputs
 }) => {
   const [configSaved, setConfigSaved] = useState(false);
+  const [constants, setConstants] = useState(null);
+
+  // Load constants on component mount
+  React.useEffect(() => {
+    const loadConstantsData = async () => {
+      try {
+        const constantsData = await loadConstants();
+        setConstants(constantsData);
+      } catch (err) {
+        console.error('Error loading constants:', err);
+      }
+    };
+    loadConstantsData();
+  }, []);
 
   const handleUpdateConfig = async () => {
     try {
@@ -253,11 +267,11 @@ const ConfigureTab = ({
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900 dark:text-white">Tree Density</h4>
                 
-                {Object.entries({
-                  'Trees per Small Hectare': 'trees_per_small_hectare',
-                  'Trees per Medium Hectare': 'trees_per_medium_hectare',
-                  'Trees per Large Hectare': 'trees_per_large_hectare',
-                  'Trees per Extra Large Hectare': 'trees_per_extra_large_hectare',
+                {constants && Object.entries({
+                  [`Trees per Small Hectare (< ${(constants.area_thresholds.medium_area_threshold / 10000).toFixed(1)} ha)`]: 'trees_per_small_hectare',
+                  [`Trees per Medium Hectare (${(constants.area_thresholds.medium_area_threshold / 10000).toFixed(1)}-${(constants.area_thresholds.large_area_threshold / 10000).toFixed(1)} ha)`]: 'trees_per_medium_hectare',
+                  [`Trees per Large Hectare (${(constants.area_thresholds.large_area_threshold / 10000).toFixed(1)}-${(constants.area_thresholds.extra_large_area_threshold / 10000).toFixed(1)} ha)`]: 'trees_per_large_hectare',
+                  [`Trees per Extra Large Hectare (> ${(constants.area_thresholds.extra_large_area_threshold / 10000).toFixed(1)} ha)`]: 'trees_per_extra_large_hectare',
                   'Max Trees per Polygon': 'max_trees_per_polygon'
                 }).map(([label, key]) => (
                   <div key={key}>
@@ -279,6 +293,10 @@ const ConfigureTab = ({
                     />
                   </div>
                 ))}
+                
+                {!constants && (
+                  <div className="text-gray-500 dark:text-gray-400">Loading configuration options...</div>
+                )}
               </div>
             </div>
           )}
