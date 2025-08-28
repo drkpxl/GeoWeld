@@ -10,13 +10,13 @@ EXTRA_LARGE_AREA_THRESHOLD = 200000  # 20 hectares
 
 # Default tree density settings (trees per hectare)
 DEFAULT_TREES_PER_SMALL_HECTARE = 5
-DEFAULT_TREES_PER_MEDIUM_HECTARE = 40
-DEFAULT_TREES_PER_LARGE_HECTARE = 100
-DEFAULT_TREES_PER_EXTRA_LARGE_HECTARE = 300
+DEFAULT_TREES_PER_MEDIUM_HECTARE = 10
+DEFAULT_TREES_PER_LARGE_HECTARE = 20
+DEFAULT_TREES_PER_EXTRA_LARGE_HECTARE = 40
 
 # Processing limits
 MAX_TREE_ATTEMPTS = 100          # Maximum attempts to place a single tree
-DEFAULT_MAX_TREES_PER_POLYGON = 300  # Default maximum trees per polygon
+DEFAULT_MAX_TREES_PER_POLYGON = 1000  # Default maximum trees per polygon
 MIN_TREES_PER_POLYGON = 1        # Minimum trees per polygon
 
 # Network and API configuration
