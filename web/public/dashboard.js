@@ -95,7 +95,7 @@ const Dashboard = ({
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="w-full">
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Available Resorts
@@ -104,7 +104,7 @@ const Dashboard = ({
             <div className="space-y-3">
               {resorts.map((resort) => (
                 <div key={resort} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between">
                     <span className="font-semibold text-gray-900 dark:text-white text-lg">{resort}</span>
                     <div className="flex space-x-2">
                       <Button
@@ -122,27 +122,24 @@ const Dashboard = ({
                           🗺️ View Map
                         </Button>
                       )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {outputs[resort] && (
+                      {outputs[resort] && (
+                        <Button
+                          size="sm"
+                          variant="success"
+                          onClick={() => handleViewResort(resort)}
+                        >
+                          📄 Download
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        variant="success"
-                        onClick={() => handleViewResort(resort)}
+                        variant="danger"
+                        onClick={() => handleDelete(resort, 'entire', `Delete entire resort "${resort}" including all files and configuration?`)}
+                        className="bg-red-600 hover:bg-red-700 text-white font-semibold"
                       >
-                        📄 Download
+                        🗑️ Delete Resort
                       </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => handleDelete(resort, 'entire', `Delete entire resort "${resort}" including all files and configuration?`)}
-                      className="bg-red-600 hover:bg-red-700 text-white font-semibold"
-                    >
-                      🗑️ Delete Resort
-                    </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -157,36 +154,6 @@ const Dashboard = ({
           )}
         </Card>
 
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Quick Actions
-          </h3>
-          <div className="space-y-3">
-            <Button
-              onClick={() => setActiveTab('upload')}
-              variant="success"
-              className="w-full justify-center"
-            >
-              📁 Upload New Resort Data
-            </Button>
-            <Button
-              onClick={() => setActiveTab('configure')}
-              variant="primary"
-              className="w-full justify-center"
-              disabled={resorts.length === 0}
-            >
-              ⚙️ Configure & Process Resort
-            </Button>
-            <Button
-              onClick={() => setActiveTab('view')}
-              variant="outline"
-              className="w-full justify-center"
-              disabled={Object.keys(outputs).length === 0}
-            >
-              🗺️ Open Map Viewer
-            </Button>
-          </div>
-        </Card>
       </div>
     </div>
   );
