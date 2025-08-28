@@ -71,7 +71,11 @@ const useMapbox = (mapboxToken, mapData, showMap, setSelectedFeature) => {
           // Add data and layers
           try {
             setupMapLayers(map.current, mapData);
-            setupMapInteractions(map.current, setSelectedFeature);
+            setupMapInteractions(map.current, (feature) => {
+              if (setSelectedFeature) {
+                setSelectedFeature(feature);
+              }
+            });
             fitMapToBounds(map.current, mapData);
           } catch (error) {
             console.error('Error setting up map layers:', error);
@@ -115,7 +119,7 @@ const useMapbox = (mapboxToken, mapData, showMap, setSelectedFeature) => {
         }
       }
     };
-  }, [showMap, mapData, mapboxToken, setSelectedFeature]);
+  }, [showMap, mapData, mapboxToken]);
 
   return { mapContainer, map };
 };
@@ -542,17 +546,80 @@ const MapLegend = () => (
 const FeatureDetails = ({ selectedFeature }) => {
   if (!selectedFeature) return null;
 
+  const props = selectedFeature.properties || {};
+  const coords = selectedFeature.coordinates;
+
+  // Helper function to format property values
+  const formatValue = (key, value) => {
+    if (value === null || value === undefined) return null;
+    
+    switch (key) {
+      case 'area_sq_meters':
+        return `${(value / 10000).toFixed(2)} hectares (${value.toLocaleString()} m²)`;
+      case 'ZoneType':
+        return value.replace(/([A-Z])/g, ' $1').trim(); // Add spaces before capitals
+      case 'leaf_type':
+        return value.charAt(0).toUpperCase() + value.slice(1);
+      default:
+        if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+        if (typeof value === 'number') return value.toLocaleString();
+        return value.toString();
+    }
+  };
+
+  // Get all non-internal properties to display
+  const displayProps = Object.entries(props)
+    .filter(([key, value]) => 
+      value !== null && 
+      value !== undefined && 
+      value !== '' &&
+      !key.startsWith('_') // Skip internal properties
+    )
+    .sort(([a], [b]) => a.localeCompare(b)); // Sort alphabetically
+
   return (
     <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg" aria-live="polite">
-      <h4 className="font-medium text-gray-900 dark:text-white mb-2">Selected Feature</h4>
-      <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-        <div><strong>Type:</strong> {selectedFeature.properties.type || 'Unknown'}</div>
-        <div><strong>Layer:</strong> {selectedFeature.layerId}</div>
-        {selectedFeature.properties.source && (
-          <div><strong>Source:</strong> {selectedFeature.properties.source}</div>
+      <h4 className="font-medium text-gray-900 dark:text-white mb-3">Selected Feature</h4>
+      
+      {/* Basic info */}
+      <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+        <div className="grid grid-cols-2 gap-4">
+          <div><strong>Type:</strong> {props.type || 'Unknown'}</div>
+          <div><strong>Layer:</strong> {selectedFeature.layerId}</div>
+        </div>
+        
+        {coords && (
+          <div className="grid grid-cols-2 gap-4">
+            <div><strong>Longitude:</strong> {coords.lng.toFixed(6)}</div>
+            <div><strong>Latitude:</strong> {coords.lat.toFixed(6)}</div>
+          </div>
         )}
-        {selectedFeature.properties.area_sq_meters && (
-          <div><strong>Area:</strong> {(selectedFeature.properties.area_sq_meters / 10000).toFixed(2)} hectares</div>
+        
+        {/* Geometry type */}
+        {selectedFeature.geometry && (
+          <div><strong>Geometry:</strong> {selectedFeature.geometry.type}</div>
+        )}
+
+        {/* All other properties */}
+        {displayProps.length > 0 && (
+          <div className="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+            <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Properties</h5>
+            <div className="space-y-1">
+              {displayProps.map(([key, value]) => {
+                const formattedValue = formatValue(key, value);
+                if (!formattedValue) return null;
+                
+                return (
+                  <div key={key} className="grid grid-cols-5 gap-2">
+                    <div className="col-span-2 font-medium">
+                      {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
+                    </div>
+                    <div className="col-span-3">{formattedValue}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
     </div>
