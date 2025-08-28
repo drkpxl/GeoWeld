@@ -46,19 +46,3 @@ june:
     max_trees_per_polygon: 200
     min_trees_per_polygon: 1
     random_seed: 42
-abasin:
-  name: Abasin Resort
-  data_files:
-    boundaries: data/abasin/boundaries.geojson
-    osm_features: data/abasin/osm_features.geojson
-  default_tree_type: tree:mixed
-  tree_config:
-    min_area_for_trees: 5000
-    small_area_threshold: 25000
-    medium_area_threshold: 100000
-    trees_per_small_hectare: 2
-    trees_per_medium_hectare: 4
-    trees_per_large_hectare: 15
-    max_trees_per_polygon: 40
-    min_trees_per_polygon: 1
-    random_seed: 42

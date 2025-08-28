@@ -83,6 +83,71 @@ const downloadFile = (resort, file) => {
   window.open(`${API_URL}/api/download/${resort}/${file}`, "_blank");
 };
 
+// Delete Functions
+const deleteProcessedFiles = async (resort) => {
+  try {
+    const res = await fetch(`${API_URL}/api/resort/${resort}/processed`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (data.success) {
+      return data;
+    } else {
+      throw new Error(data.error || "Delete failed");
+    }
+  } catch (err) {
+    throw new Error("Error deleting processed files: " + err.message);
+  }
+};
+
+const deleteOsmFiles = async (resort) => {
+  try {
+    const res = await fetch(`${API_URL}/api/resort/${resort}/osm`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (data.success) {
+      return data;
+    } else {
+      throw new Error(data.error || "Delete failed");
+    }
+  } catch (err) {
+    throw new Error("Error deleting OSM files: " + err.message);
+  }
+};
+
+const deleteBoundaryFiles = async (resort) => {
+  try {
+    const res = await fetch(`${API_URL}/api/resort/${resort}/boundaries`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (data.success) {
+      return data;
+    } else {
+      throw new Error(data.error || "Delete failed");
+    }
+  } catch (err) {
+    throw new Error("Error deleting boundary files: " + err.message);
+  }
+};
+
+const deleteEntireResort = async (resort) => {
+  try {
+    const res = await fetch(`${API_URL}/api/resort/${resort}`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (data.success) {
+      return data;
+    } else {
+      throw new Error(data.error || "Delete failed");
+    }
+  } catch (err) {
+    throw new Error("Error deleting resort: " + err.message);
+  }
+};
+
 // Processing
 const createProcessStream = (selectedResort, onMessage, onComplete, onError) => {
   const eventSource = new EventSource(`${API_URL}/api/process/${selectedResort}`);
@@ -197,6 +262,10 @@ window.ApiServices = {
   handleFileUpload,
   loadOutputs,
   downloadFile,
+  deleteProcessedFiles,
+  deleteOsmFiles,
+  deleteBoundaryFiles,
+  deleteEntireResort,
   createProcessStream,
   loadMapData,
   fetchMapboxToken,

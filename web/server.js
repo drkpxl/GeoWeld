@@ -393,6 +393,147 @@ app.get('/api/download/:resort/:file', async (req, res) => {
   }
 });
 
+// Delete processed files for a resort
+app.delete('/api/resort/:name/processed', async (req, res) => {
+  try {
+    const resortName = sanitizeResortName(req.params.name);
+    if (!resortName) {
+      return res.status(400).json({ error: 'Invalid resort name' });
+    }
+    
+    const outputDir = path.join(ROOT_DIR, 'output', resortName);
+    
+    // Check if output directory exists
+    try {
+      await fs.access(outputDir);
+    } catch {
+      return res.status(404).json({ error: 'No processed files found for this resort' });
+    }
+    
+    // Remove all files in the output directory
+    const files = await fs.readdir(outputDir);
+    for (const file of files) {
+      await fs.unlink(path.join(outputDir, file));
+    }
+    
+    // Remove the output directory
+    await fs.rmdir(outputDir);
+    
+    res.json({ success: true, message: 'Processed files deleted successfully' });
+  } catch (error) {
+    console.error('Delete processed files error:', error);
+    res.status(500).json({ error: 'Failed to delete processed files' });
+  }
+});
+
+// Delete OSM files for a resort
+app.delete('/api/resort/:name/osm', async (req, res) => {
+  try {
+    const resortName = sanitizeResortName(req.params.name);
+    if (!resortName) {
+      return res.status(400).json({ error: 'Invalid resort name' });
+    }
+    
+    const osmFile = path.join(ROOT_DIR, 'data', resortName, 'osm_features.geojson');
+    
+    // Check if OSM file exists
+    try {
+      await fs.access(osmFile);
+    } catch {
+      return res.status(404).json({ error: 'No OSM file found for this resort' });
+    }
+    
+    // Remove the OSM file
+    await fs.unlink(osmFile);
+    
+    res.json({ success: true, message: 'OSM file deleted successfully' });
+  } catch (error) {
+    console.error('Delete OSM file error:', error);
+    res.status(500).json({ error: 'Failed to delete OSM file' });
+  }
+});
+
+// Delete boundary files for a resort
+app.delete('/api/resort/:name/boundaries', async (req, res) => {
+  try {
+    const resortName = sanitizeResortName(req.params.name);
+    if (!resortName) {
+      return res.status(400).json({ error: 'Invalid resort name' });
+    }
+    
+    const boundaryFile = path.join(ROOT_DIR, 'data', resortName, 'boundaries.geojson');
+    
+    // Check if boundary file exists
+    try {
+      await fs.access(boundaryFile);
+    } catch {
+      return res.status(404).json({ error: 'No boundary file found for this resort' });
+    }
+    
+    // Remove the boundary file
+    await fs.unlink(boundaryFile);
+    
+    res.json({ success: true, message: 'Boundary file deleted successfully' });
+  } catch (error) {
+    console.error('Delete boundary file error:', error);
+    res.status(500).json({ error: 'Failed to delete boundary file' });
+  }
+});
+
+// Delete entire resort (all files and configuration)
+app.delete('/api/resort/:name', async (req, res) => {
+  try {
+    const resortName = sanitizeResortName(req.params.name);
+    if (!resortName) {
+      return res.status(400).json({ error: 'Invalid resort name' });
+    }
+    
+    const dataDir = path.join(ROOT_DIR, 'data', resortName);
+    const outputDir = path.join(ROOT_DIR, 'output', resortName);
+    const configPath = path.join(ROOT_DIR, 'config', 'resorts.yaml');
+    
+    // Remove data directory if it exists
+    try {
+      await fs.access(dataDir);
+      const dataFiles = await fs.readdir(dataDir);
+      for (const file of dataFiles) {
+        await fs.unlink(path.join(dataDir, file));
+      }
+      await fs.rmdir(dataDir);
+    } catch {
+      // Data directory might not exist
+    }
+    
+    // Remove output directory if it exists
+    try {
+      await fs.access(outputDir);
+      const outputFiles = await fs.readdir(outputDir);
+      for (const file of outputFiles) {
+        await fs.unlink(path.join(outputDir, file));
+      }
+      await fs.rmdir(outputDir);
+    } catch {
+      // Output directory might not exist
+    }
+    
+    // Remove resort from configuration
+    try {
+      const configContent = await fs.readFile(configPath, 'utf8');
+      const config = yaml.load(configContent) || {};
+      delete config[resortName];
+      await fs.writeFile(configPath, yaml.dump(config), 'utf8');
+    } catch (error) {
+      console.error('Error updating config:', error);
+      // Continue even if config update fails
+    }
+    
+    res.json({ success: true, message: 'Resort deleted successfully' });
+  } catch (error) {
+    console.error('Delete resort error:', error);
+    res.status(500).json({ error: 'Failed to delete resort' });
+  }
+});
+
 // Get Mapbox token
 app.get('/api/mapbox-token', (req, res) => {
   res.json({ token: process.env.MAPBOX_TOKEN });

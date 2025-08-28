@@ -108,6 +108,7 @@ function App() {
               setMapData={setMapData}
               setFeatureStats={setFeatureStats}
               setShowMap={setShowMap}
+              refreshData={reloadData}
             />
           )}
 
@@ -157,6 +158,7 @@ function App() {
               setFeatureStats={setFeatureStats}
               selectedFeature={selectedFeature}
               setSelectedFeature={setSelectedFeature}
+              refreshData={reloadData}
             />
           )}
         </main>

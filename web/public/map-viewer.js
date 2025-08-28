@@ -1,7 +1,7 @@
 // Map Viewer Tab Component for GeoWeld Resort Processor
 const { useState, useEffect, useRef } = React;
 const { Button, Card, InfoCard } = window.Components;
-const { loadMapData, downloadFile, calculateFeatureStats } = window.ApiServices;
+const { loadMapData, downloadFile, calculateFeatureStats, deleteEntireResort } = window.ApiServices;
 
 const MapViewer = ({ 
   resorts,
@@ -16,7 +16,8 @@ const MapViewer = ({
   featureStats,
   setFeatureStats,
   selectedFeature,
-  setSelectedFeature
+  setSelectedFeature,
+  refreshData
 }) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -33,6 +34,31 @@ const MapViewer = ({
       } catch (err) {
         console.error("Error loading map data:", err);
       }
+    }
+  };
+
+  const handleDelete = async (type, confirmMessage) => {
+    if (!selectedResort) return;
+    
+    if (!confirm(`${confirmMessage}\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      if (type === 'entire') {
+        await deleteEntireResort(selectedResort);
+        // Clear all data if entire resort is deleted
+        setMapData(null);
+        setFeatureStats(null);
+        setShowMap(false);
+        setSelectedResort('');
+      }
+      
+      if (refreshData) {
+        refreshData();
+      }
+    } catch (err) {
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -336,29 +362,54 @@ const MapViewer = ({
       </div>
 
       {selectedResort && (
-        outputs[selectedResort] ? (
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Download Files - {selectedResort}
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {outputs[selectedResort].map((file) => (
-                <Button
-                  key={file}
-                  variant="outline"
-                  onClick={() => downloadFile(selectedResort, file)}
-                  className="justify-start"
-                  aria-label={`Download ${file}`}
-                  title={`Download ${file}`}
-                >
-                  📄 {file}
-                </Button>
-              ))}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Files - {selectedResort}
+          </h3>
+          
+          <div className="flex flex-wrap gap-2 mb-4">
+            {outputs[selectedResort] && (
+              <Button
+                size="sm"
+                variant="success"
+                onClick={() => downloadFile(selectedResort, outputs[selectedResort][0])}
+              >
+                📄 Download
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => handleDelete('entire', `Delete entire resort "${selectedResort}" including all files and configuration?`)}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+            >
+              🗑️ Delete Resort
+            </Button>
+          </div>
+          
+          {outputs[selectedResort] ? (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Available Downloads</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {outputs[selectedResort].map((file) => (
+                  <Button
+                    key={file}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => downloadFile(selectedResort, file)}
+                    className="justify-start"
+                    aria-label={`Download ${file}`}
+                    title={`Download ${file}`}
+                  >
+                    📄 {file}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </Card>
-        ) : (
-          <p className="text-gray-600 dark:text-gray-400">No processed files available for download.</p>
-        )
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400">No processed files available for download.</p>
+          )}
+        </Card>
       )}
 
       {featureStats && (

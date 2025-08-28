@@ -1,6 +1,6 @@
 // Dashboard Tab Component for GeoWeld Resort Processor
 const { Button, Card, InfoCard } = window.Components;
-const { loadConfig, loadMapData } = window.ApiServices;
+const { loadConfig, loadMapData, deleteEntireResort } = window.ApiServices;
 
 const Dashboard = ({ 
   resorts, 
@@ -11,7 +11,8 @@ const Dashboard = ({
   setConfig,
   setMapData,
   setFeatureStats,
-  setShowMap 
+  setShowMap,
+  refreshData
 }) => {
   const handleConfigureResort = async (resort) => {
     try {
@@ -34,6 +35,25 @@ const Dashboard = ({
       setActiveTab('view');
     } catch (err) {
       console.error("Error loading map data:", err);
+    }
+  };
+
+  const handleDelete = async (resort, type, confirmMessage) => {
+    if (!confirm(`${confirmMessage}\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      if (type === 'entire') {
+        await deleteEntireResort(resort);
+      }
+      
+      // Refresh data after successful delete
+      if (refreshData) {
+        refreshData();
+      }
+    } catch (err) {
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -81,26 +101,48 @@ const Dashboard = ({
             Available Resorts
           </h3>
           {resorts.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {resorts.map((resort) => (
-                <div key={resort} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <span className="font-medium text-gray-900 dark:text-white">{resort}</span>
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleConfigureResort(resort)}
-                    >
-                      Configure
-                    </Button>
+                <div key={resort} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-semibold text-gray-900 dark:text-white text-lg">{resort}</span>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleConfigureResort(resort)}
+                      >
+                        ⚙️ Configure
+                      </Button>
+                      {outputs[resort] && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleViewResort(resort)}
+                        >
+                          🗺️ View Map
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
                     {outputs[resort] && (
                       <Button
                         size="sm"
+                        variant="success"
                         onClick={() => handleViewResort(resort)}
                       >
-                        View
+                        📄 Download
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleDelete(resort, 'entire', `Delete entire resort "${resort}" including all files and configuration?`)}
+                      className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+                    >
+                      🗑️ Delete Resort
+                    </Button>
                   </div>
                 </div>
               ))}
