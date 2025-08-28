@@ -199,6 +199,10 @@ const AppStateProvider = ({ children }) => {
     setSelectedResortWithUrl: (resort) => {
       actions.setSelectedResort(resort);
       updateUrl(state.activeTab, resort || null);
+      // Clear previous map data when changing resorts
+      if (resort !== state.selectedResort) {
+        actions.resetMapState();
+      }
     },
     
     // Combined resort selection and map loading
@@ -278,7 +282,12 @@ const updateUrl = (tab, resort = null) => {
   if (tab) url.searchParams.set('tab', tab);
   if (resort) url.searchParams.set('resort', resort);
   else url.searchParams.delete('resort');
-  window.history.pushState({}, '', url.toString());
+  
+  // Only update the URL if it's different from current
+  const newUrl = url.toString();
+  if (newUrl !== window.location.href) {
+    window.history.pushState({}, '', newUrl);
+  }
 };
 
 // URL Parameter Parsing Helper

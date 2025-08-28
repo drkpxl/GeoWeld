@@ -54,14 +54,22 @@ function App() {
           if (tab === 'view' && outputsData[resort]) {
             try {
               const { loadMapData, calculateFeatureStats } = window.ApiServices;
+              actions.setLoadingMap(true);
               const data = await loadMapData(resort);
               actions.setMapData(data);
               actions.setFeatureStats(calculateFeatureStats(data));
               actions.setShowMap(true);
             } catch (err) {
               console.error("Error loading map data from URL:", err);
+            } finally {
+              actions.setLoadingMap(false);
             }
           }
+        } else if (resort && !resortsData.includes(resort)) {
+          // If resort in URL doesn't exist, clear it from URL
+          const url = new URL(window.location);
+          url.searchParams.delete('resort');
+          window.history.replaceState({}, '', url.toString());
         }
       } catch (err) {
         console.error("Error initializing app:", err);

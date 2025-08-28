@@ -19,8 +19,8 @@ const useMapbox = (mapboxToken, mapData, showMap, setSelectedFeature) => {
 
     // Ensure container has proper dimensions before initializing map
     const container = mapContainer.current;
-    container.style.minHeight = '400px';
-    container.style.height = '400px';
+    container.style.minHeight = '560px';
+    container.style.height = '560px';
     container.style.width = '100%';
     
     // Small delay to ensure container is rendered with proper dimensions
@@ -322,7 +322,7 @@ const FileManagement = ({ selectedResort, outputs, onDelete, deleting }) => (
       Files - {selectedResort}
     </h3>
     
-    <div className="flex flex-wrap gap-2 mb-4">
+    <div className="flex space-x-2 mb-4">
       {outputs[selectedResort] && (
         <Button
           size="sm"
@@ -481,7 +481,7 @@ const InteractiveMap = ({ mapboxToken, mapData, selectedResort, featureStats, se
       
       <div
         ref={mapContainer}
-        className="w-full h-96 rounded-lg border border-gray-200 dark:border-gray-700"
+        className="w-full h-[560px] rounded-lg border border-gray-200 dark:border-gray-700"
         role="region"
         aria-label={selectedResort ? `${selectedResort} map` : 'Resort map'}
       />
@@ -499,7 +499,10 @@ const MapViewer = ({ refreshData }) => {
 
   const handleResortSelection = async (e) => {
     const resort = e.target.value;
+    
+    // Update URL immediately for better UX
     actions.setSelectedResortWithUrl(resort);
+    
     if (resort) {
       actions.setLoadingMap(true);
       try {
@@ -513,6 +516,9 @@ const MapViewer = ({ refreshData }) => {
       } finally {
         actions.setLoadingMap(false);
       }
+    } else {
+      // Clear map state when no resort selected
+      actions.resetMapState();
     }
   };
 
