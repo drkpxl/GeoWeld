@@ -5,7 +5,7 @@ Constants for GeoJSON processing
 # Area thresholds (square meters)
 SMALL_AREA_THRESHOLD = 3000      # 0.5 hectares
 MEDIUM_AREA_THRESHOLD = 20000    # 2.5 hectares
-LARGE_AREA_THRESHOLD = 100000    # 10 hectares
+LARGE_AREA_THRESHOLD = 200000    # 20 hectares
 EXTRA_LARGE_AREA_THRESHOLD = 500000  # 50 hectares
 
 # Default tree density settings (trees per hectare)
@@ -16,7 +16,7 @@ DEFAULT_TREES_PER_EXTRA_LARGE_HECTARE = 300
 
 # Processing limits
 MAX_TREE_ATTEMPTS = 100          # Maximum attempts to place a single tree
-DEFAULT_MAX_TREES_PER_POLYGON = 40  # Default maximum trees per polygon
+DEFAULT_MAX_TREES_PER_POLYGON = 300  # Default maximum trees per polygon
 MIN_TREES_PER_POLYGON = 1        # Minimum trees per polygon
 
 # Network and API configuration
