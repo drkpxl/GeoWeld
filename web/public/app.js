@@ -44,10 +44,6 @@ function App() {
   const [resortName, setResortName] = useState("");
   const [uploadError, setUploadError] = useState("");
   
-  // Processing state
-  const [processing, setProcessing] = useState(false);
-  const [processOutput, setProcessOutput] = useState([]);
-  
   // Map viewer state
   const [mapData, setMapData] = useState(null);
   const [showMap, setShowMap] = useState(false);
@@ -168,7 +164,6 @@ function App() {
             <window.Dashboard 
               resorts={resorts}
               outputs={outputs}
-              processing={processing}
               setActiveTab={setActiveTabWithUrl}
               setSelectedResort={setSelectedResortWithUrl}
               setConfig={setConfig}
@@ -201,10 +196,6 @@ function App() {
               config={config}
               setConfig={setConfig}
               setActiveTab={setActiveTabWithUrl}
-              processing={processing}
-              setProcessing={setProcessing}
-              processOutput={processOutput}
-              setProcessOutput={setProcessOutput}
               loadOutputs={reloadData}
             />
           )}
@@ -236,7 +227,9 @@ function App() {
 
 ReactDOM.render(
   <window.Components.ThemeProvider>
-    <App />
+    <window.NotificationSystem.NotificationProvider>
+      <App />
+    </window.NotificationSystem.NotificationProvider>
   </window.Components.ThemeProvider>, 
   document.getElementById("root")
 );

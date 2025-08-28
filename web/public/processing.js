@@ -1,45 +1,17 @@
 // Processing Tab Component for GeoWeld Resort Processor
-const { useState } = React;
 const { Button, Card } = window.Components;
-const { createProcessStream } = window.ApiServices;
+const { useProcessing } = window.Hooks;
 
 const ProcessingTab = ({ 
   selectedResort, 
-  processing, 
-  setProcessing, 
-  processOutput, 
-  setProcessOutput,
   loadOutputs,
   setActiveTab 
 }) => {
-  const processResort = async () => {
-    if (!selectedResort) return;
-    
-    setProcessing(true);
-    setProcessOutput([]);
-    
-    const onMessage = (data) => {
-      setProcessOutput((prev) => [...prev, data]);
-    };
-    
-    const onComplete = (data) => {
-      setProcessing(false);
-      if (data.code === 0) {
-        loadOutputs();
-        setActiveTab('view');
-      }
-    };
-    
-    const onError = () => {
-      setProcessing(false);
-    };
-
-    try {
-      createProcessStream(selectedResort, onMessage, onComplete, onError);
-    } catch (error) {
-      setProcessing(false);
-    }
-  };
+  const { processing, processOutput, processResort } = useProcessing(
+    selectedResort,
+    loadOutputs,
+    setActiveTab
+  );
 
   return (
     <div className="space-y-6">

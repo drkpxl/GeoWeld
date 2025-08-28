@@ -2,6 +2,7 @@
 const { useState, useRef } = React;
 const { Button, Card } = window.Components;
 const { handleFileUpload, loadConfig, updateConfig, loadConstants } = window.ApiServices;
+const { useProcessing } = window.Hooks;
 
 // Upload Tab Component
 const UploadTab = ({ 
@@ -137,14 +138,17 @@ const ConfigureTab = ({
   config, 
   setConfig, 
   setActiveTab,
-  processing,
-  setProcessing,
-  processOutput,
-  setProcessOutput,
   loadOutputs
 }) => {
   const [configSaved, setConfigSaved] = useState(false);
   const [constants, setConstants] = useState(null);
+  
+  // Use shared processing hook
+  const { processing, processOutput, processResort } = useProcessing(
+    selectedResort,
+    loadOutputs,
+    setActiveTab
+  );
 
   // Load constants on component mount
   React.useEffect(() => {
@@ -183,34 +187,6 @@ const ConfigureTab = ({
     }
   };
 
-  const processResort = async () => {
-    if (!selectedResort) return;
-    
-    setProcessing(true);
-    setProcessOutput([]);
-    
-    const onMessage = (data) => {
-      setProcessOutput((prev) => [...prev, data]);
-    };
-    
-    const onComplete = (data) => {
-      setProcessing(false);
-      if (data.code === 0) {
-        loadOutputs();
-        setActiveTab('view');
-      }
-    };
-    
-    const onError = () => {
-      setProcessing(false);
-    };
-
-    try {
-      window.ApiServices.createProcessStream(selectedResort, onMessage, onComplete, onError);
-    } catch (error) {
-      setProcessing(false);
-    }
-  };
 
   // Reset config saved status when config changes
   const handleConfigChange = (newConfig) => {

@@ -1,11 +1,11 @@
 // Dashboard Tab Component for GeoWeld Resort Processor
 const { Button, Card, InfoCard } = window.Components;
 const { loadConfig, loadMapData, deleteEntireResort } = window.ApiServices;
+const { useNotifications } = window.NotificationSystem;
 
 const Dashboard = ({ 
   resorts, 
   outputs, 
-  processing, 
   setActiveTab, 
   setSelectedResort, 
   setConfig,
@@ -14,6 +14,7 @@ const Dashboard = ({
   setShowMap,
   refreshData
 }) => {
+  const { showError, showSuccess } = useNotifications();
   const handleConfigureResort = async (resort) => {
     try {
       setSelectedResort(resort);
@@ -22,6 +23,7 @@ const Dashboard = ({
       setActiveTab('configure');
     } catch (err) {
       console.error("Error configuring resort:", err);
+      showError("Failed to load resort configuration. Please try again.", "Configuration Error");
     }
   };
 
@@ -35,6 +37,7 @@ const Dashboard = ({
       setActiveTab('view');
     } catch (err) {
       console.error("Error loading map data:", err);
+      showError("Failed to load map data. Please try again.", "Map Loading Error");
     }
   };
 
@@ -48,12 +51,14 @@ const Dashboard = ({
         await deleteEntireResort(resort);
       }
       
-      // Refresh data after successful delete
+      // Show success message and refresh data
+      showSuccess(`Resort "${resort}" has been completely deleted.`, "Resort Deleted");
       if (refreshData) {
         refreshData();
       }
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      console.error("Delete error:", err);
+      showError(`Failed to delete resort: ${err.message}`, "Delete Error");
     }
   };
 
@@ -89,9 +94,9 @@ const Dashboard = ({
         />
         <InfoCard
           title="Processing"
-          value={processing ? "Active" : "Idle"}
-          icon={processing ? "⏯️" : "⏸️"}
-          subtitle={processing ? "Processing..." : "Ready to process"}
+          value="Ready"
+          icon="⏸️"
+          subtitle="Ready to process"
         />
       </div>
 
