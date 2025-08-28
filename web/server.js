@@ -7,6 +7,7 @@ import yaml from 'js-yaml';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import auth from 'basic-auth';
 
 dotenv.config();
 
@@ -40,6 +41,35 @@ function sanitizeFileName(filename) {
 }
 
 const app = express();
+
+// Basic authentication middleware
+const basicAuth = (req, res, next) => {
+  const credentials = auth(req);
+  const validUsername = process.env.ADMIN_USERNAME || 'admin';
+  const validPassword = process.env.ADMIN_PASSWORD;
+
+  if (!validPassword) {
+    return res.status(500).json({ error: 'Authentication not configured' });
+  }
+
+  if (!credentials || credentials.name !== validUsername || credentials.pass !== validPassword) {
+    res.set('WWW-Authenticate', 'Basic realm="GeoWeld Admin"');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  next();
+};
+
+// Apply authentication to all routes except health checks
+app.use((req, res, next) => {
+  // Skip auth for health check or if no password is set
+  if (req.path === '/health' || !process.env.ADMIN_PASSWORD) {
+    return next();
+  }
+  
+  return basicAuth(req, res, next);
+});
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -72,6 +102,11 @@ async function ensureDir(dirPath) {
     console.error(`Error creating directory ${dirPath}:`, err);
   }
 }
+
+// Health check endpoint (no auth required)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // Upload boundaries.geojson
 app.post('/api/upload', upload.single('file'), async (req, res) => {
