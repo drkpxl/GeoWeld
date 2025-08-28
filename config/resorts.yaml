@@ -16,7 +16,6 @@ mammoth:
     max_trees_per_polygon: 300
     min_trees_per_polygon: 1
     random_seed: 42
-
 steamboat:
   name: Steamboat Springs
   data_files:
@@ -29,6 +28,25 @@ steamboat:
     medium_area_threshold: 100000
     large_area_threshold: 200000
     trees_per_small_hectare: 5
+    trees_per_medium_hectare: 10
+    trees_per_large_hectare: 20
+    trees_per_extra_large_hectare: 40
+    max_trees_per_polygon: 1000
+    min_trees_per_polygon: 1
+    random_seed: 42
+palisades_tahoe:
+  name: Palisades_tahoe Resort
+  data_files:
+    boundaries: data/palisades_tahoe/boundaries.geojson
+    osm_features: data/palisades_tahoe/osm_features.geojson
+  default_tree_type: tree:mixed
+  tree_config:
+    min_area_for_trees: 0.5
+    small_area_threshold: 1
+    medium_area_threshold: 20000
+    large_area_threshold: 100000
+    extra_large_area_threshold: 200000
+    trees_per_small_hectare: 4
     trees_per_medium_hectare: 10
     trees_per_large_hectare: 20
     trees_per_extra_large_hectare: 40

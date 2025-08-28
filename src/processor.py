@@ -702,11 +702,20 @@ class ResortProcessor:
         return tree_features
     
     def _extract_valid_polygons(self, geometry) -> List[Polygon]:
-        """Extract valid polygons from a geometry (Polygon or MultiPolygon)."""
+        """Extract valid polygons from a geometry (Polygon, MultiPolygon, or GeometryCollection)."""
         if isinstance(geometry, MultiPolygon):
             return [poly for poly in geometry.geoms if isinstance(poly, Polygon)]
         elif isinstance(geometry, Polygon):
             return [geometry]
+        elif isinstance(geometry, GeometryCollection):
+            # Handle GeometryCollection (result of make_valid on complex geometries)
+            polygons = []
+            for geom in geometry.geoms:
+                if isinstance(geom, Polygon):
+                    polygons.append(geom)
+                elif isinstance(geom, MultiPolygon):
+                    polygons.extend([poly for poly in geom.geoms if isinstance(poly, Polygon)])
+            return polygons
         else:
             return []
     
