@@ -355,8 +355,34 @@ class ResortProcessor:
             )
             raise ValueError(error_msg)
         
-        self.feature_boundary = feature_boundary_features.geometry.union_all()
-        logger.info("Using feature_boundary for clipping OSM features (forests/rocks)")
+        # Union all feature_boundary geometries
+        boundary_union = feature_boundary_features.geometry.union_all()
+        
+        # Validate that feature_boundary is a proper area geometry (Polygon)
+        if boundary_union.geom_type in ['LineString', 'MultiLineString']:
+            error_msg = (
+                f"\n❌ Invalid feature_boundary geometry type: {boundary_union.geom_type}\n"
+                f"   The feature_boundary must be a Polygon (closed area), not a line.\n"
+                f"   \n"
+                f"   How to fix this:\n"
+                f"   1. In your GIS software, convert the LineString boundary to a Polygon\n"
+                f"   2. Or create a new Polygon feature that encompasses the ski area\n"
+                f"   3. Ensure the geometry type is 'Polygon' in your boundaries.geojson\n"
+                f"   \n"
+                f"   The feature_boundary defines the area where trees and rocks can be placed.\n"
+                f"   It must be a closed area (Polygon), not a line (LineString)."
+            )
+            raise ValueError(error_msg)
+        elif boundary_union.geom_type not in ['Polygon', 'MultiPolygon']:
+            error_msg = (
+                f"\n❌ Unsupported feature_boundary geometry type: {boundary_union.geom_type}\n"
+                f"   The feature_boundary must be a Polygon or MultiPolygon.\n"
+                f"   Please ensure your feature_boundary is a proper area geometry."
+            )
+            raise ValueError(error_msg)
+        
+        self.feature_boundary = boundary_union
+        logger.info(f"Using feature_boundary ({self.feature_boundary.geom_type}) for clipping OSM features (forests/rocks)")
         
         # Check if OSM file exists and has content, fetch from Overpass if not
         features_file = self.resort_config['data_files']['osm_features']
