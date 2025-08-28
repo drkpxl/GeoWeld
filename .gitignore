@@ -201,4 +201,4 @@ test_output/
 test_data/
 
 # Config
-config/
+config/resorts.yaml
