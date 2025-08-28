@@ -147,6 +147,26 @@ const ConfigureTab = ({ loadOutputs }) => {
     loadConstantsData();
   }, []);
 
+  // Load config when selectedResort changes (handles URL parameter initialization)
+  React.useEffect(() => {
+    const loadResortConfig = async () => {
+      if (state.selectedResort && (!state.config || state.config.name !== state.selectedResort)) {
+        try {
+          setConfigSaved(false); // Reset saved status when loading new config
+          const configData = await loadConfig(state.selectedResort);
+          actions.setConfig(configData);
+        } catch (err) {
+          console.error("Error loading config for resort:", state.selectedResort, err);
+        }
+      } else if (!state.selectedResort) {
+        // Clear config when no resort is selected
+        actions.setConfig(null);
+        setConfigSaved(false);
+      }
+    };
+    loadResortConfig();
+  }, [state.selectedResort]);
+
   const handleUpdateConfig = async () => {
     try {
       await updateConfig(state.selectedResort, state.config);
@@ -157,18 +177,10 @@ const ConfigureTab = ({ loadOutputs }) => {
     }
   };
 
-  const handleResortChange = async (e) => {
+  const handleResortChange = (e) => {
     const resort = e.target.value;
     actions.setSelectedResortWithUrl(resort);
-    setConfigSaved(false); // Reset saved status when changing resorts
-    if (resort) {
-      try {
-        const configData = await loadConfig(resort);
-        actions.setConfig(configData);
-      } catch (err) {
-        console.error("Error loading config:", err);
-      }
-    }
+    // Config loading is now handled by useEffect when selectedResort changes
   };
 
 

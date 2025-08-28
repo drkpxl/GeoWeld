@@ -5,27 +5,70 @@ const { Button, Card, InfoCard, LoadingSpinner } = window.Components;
 const { loadMapData, downloadFile, calculateFeatureStats, deleteEntireResort } = window.ApiServices;
 const { useNotifications } = window.NotificationSystem;
 
+// Calculate initial center from data bounds
+const calculateDataCenter = (mapData) => {
+  if (!mapData || !mapData.features || mapData.features.length === 0) {
+    return { center: [-105.8717, 39.6403], zoom: 12 }; // A-Basin fallback
+  }
+
+  const bounds = new mapboxgl.LngLatBounds();
+  let hasValidBounds = false;
+
+  mapData.features.forEach(feature => {
+    try {
+      if (feature.geometry && feature.geometry.coordinates) {
+        if (feature.geometry.type === 'Point') {
+          const coord = feature.geometry.coordinates;
+          if (Array.isArray(coord) && coord.length >= 2 && 
+              typeof coord[0] === 'number' && typeof coord[1] === 'number' &&
+              !isNaN(coord[0]) && !isNaN(coord[1])) {
+            bounds.extend(coord);
+            hasValidBounds = true;
+          }
+        } else if (feature.geometry.type === 'Polygon') {
+          const coords = feature.geometry.coordinates[0]; // Get exterior ring
+          if (Array.isArray(coords)) {
+            coords.forEach(coord => {
+              if (Array.isArray(coord) && coord.length >= 2 && 
+                  typeof coord[0] === 'number' && typeof coord[1] === 'number' &&
+                  !isNaN(coord[0]) && !isNaN(coord[1])) {
+                bounds.extend(coord);
+                hasValidBounds = true;
+              }
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Error processing feature for center calculation:', error);
+    }
+  });
+
+  if (hasValidBounds) {
+    const center = bounds.getCenter();
+    return {
+      center: [center.lng, center.lat],
+      zoom: 12,
+      bounds: bounds
+    };
+  }
+
+  return { center: [-105.8717, 39.6403], zoom: 12 }; // A-Basin fallback
+};
+
 // Custom hook for map management
 const useMapbox = (mapboxToken, mapData, showMap, setSelectedFeature) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const initTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!showMap || !mapboxToken || !mapData || !mapContainer.current) {
       return;
     }
 
-    // Clear any existing timeout
-    if (initTimeoutRef.current) {
-      clearTimeout(initTimeoutRef.current);
-      initTimeoutRef.current = null;
-    }
-
     // Clean up existing map safely
     if (map.current) {
       try {
-        // Remove event listeners before destroying map
         map.current.off();
         map.current.remove();
       } catch (error) {
@@ -34,83 +77,65 @@ const useMapbox = (mapboxToken, mapData, showMap, setSelectedFeature) => {
       map.current = null;
     }
 
-    // Ensure container has proper dimensions before initializing map
+    // Ensure container has proper dimensions
     const container = mapContainer.current;
     container.style.minHeight = '560px';
     container.style.height = '560px';
     container.style.width = '100%';
     
-    // Small delay to ensure container is rendered with proper dimensions
-    initTimeoutRef.current = setTimeout(() => {
-      try {
-        mapboxgl.accessToken = mapboxToken;
-        map.current = new mapboxgl.Map({
-          container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/outdoors-v12',
-          center: [-72.908, 43.117],
-          zoom: 12
-        });
+    // Calculate initial center from data to avoid Stratton pan
+    const { center, zoom, bounds } = calculateDataCenter(mapData);
+    
+    try {
+      mapboxgl.accessToken = mapboxToken;
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/outdoors-v12',
+        center: center,
+        zoom: zoom
+      });
 
-        // Immediately resize after creation
-        setTimeout(() => {
-          if (map.current) {
-            map.current.resize();
-          }
-        }, 50);
-
-        map.current.on('load', () => {
-          if (!map.current) return; // Check if map still exists
-          
-          // Force map resize to ensure proper container dimensions
-          setTimeout(() => {
-            if (map.current) {
-              map.current.resize();
-            }
-          }, 100);
-
-          // Add data and layers
-          try {
-            setupMapLayers(map.current, mapData);
-            setupMapInteractions(map.current, (feature) => {
-              if (setSelectedFeature) {
-                setSelectedFeature(feature);
-              }
-            });
-            fitMapToBounds(map.current, mapData);
-          } catch (error) {
-            console.error('Error setting up map layers:', error);
-          }
-          
-          // Additional resize call after everything is loaded
-          setTimeout(() => {
-            if (map.current) {
-              map.current.resize();
-            }
-          }, 500);
-        });
+      map.current.on('load', () => {
+        if (!map.current) return; // Check if map still exists
         
-        // Add error handler
-        map.current.on('error', (e) => {
-          console.error('Map error:', e.error);
-        });
+        // Single resize after load
+        map.current.resize();
 
-      } catch (error) {
-        console.error('Error initializing map:', error);
-      }
-    }, 100);
+        // Add data and layers
+        try {
+          setupMapLayers(map.current, mapData);
+          setupMapInteractions(map.current, (feature) => {
+            if (setSelectedFeature) {
+              setSelectedFeature(feature);
+            }
+          });
+          
+          // Fit to bounds with proper padding if we have calculated bounds
+          if (bounds) {
+            map.current.fitBounds(bounds, {
+              padding: { top: 50, bottom: 50, left: 50, right: 50 },
+              maxZoom: 15
+            });
+          }
+        } catch (error) {
+          console.error('Error setting up map layers:', error);
+        }
+      });
+      
+      // Add error handler
+      map.current.on('error', (e) => {
+        console.error('Map error:', e.error);
+      });
+
+    } catch (error) {
+      console.error('Error initializing map:', error);
+    }
 
     // Cleanup function
     return () => {
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current);
-        initTimeoutRef.current = null;
-      }
-      
       if (map.current) {
         try {
-          // Remove all event listeners first
           map.current.off();
-          // Then remove the map
           map.current.remove();
         } catch (error) {
           console.warn('Error during map cleanup:', error);
@@ -336,67 +361,6 @@ const setupMapInteractions = (map, setSelectedFeature) => {
   });
 };
 
-// Calculate and fit map to bounds
-const fitMapToBounds = (map, mapData) => {
-  const bounds = new mapboxgl.LngLatBounds();
-  let hasValidBounds = false;
-
-  if (mapData && mapData.features && mapData.features.length > 0) {
-    mapData.features.forEach(feature => {
-      try {
-        if (feature.geometry && feature.geometry.coordinates) {
-          if (feature.geometry.type === 'Point') {
-            const coord = feature.geometry.coordinates;
-            if (Array.isArray(coord) && coord.length >= 2 && 
-                typeof coord[0] === 'number' && typeof coord[1] === 'number' &&
-                !isNaN(coord[0]) && !isNaN(coord[1])) {
-              bounds.extend(coord);
-              hasValidBounds = true;
-            }
-          } else if (feature.geometry.type === 'Polygon') {
-            const coords = feature.geometry.coordinates[0]; // Get exterior ring
-            if (Array.isArray(coords)) {
-              coords.forEach(coord => {
-                if (Array.isArray(coord) && coord.length >= 2 && 
-                    typeof coord[0] === 'number' && typeof coord[1] === 'number' &&
-                    !isNaN(coord[0]) && !isNaN(coord[1])) {
-                  bounds.extend(coord);
-                  hasValidBounds = true;
-                }
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.warn('Error processing feature bounds:', error);
-      }
-    });
-  }
-
-  // Fit map to actual data bounds if available
-  if (hasValidBounds) {
-    try {
-      map.fitBounds(bounds, {
-        padding: { top: 50, bottom: 50, left: 50, right: 50 },
-        maxZoom: 15
-      });
-    } catch (error) {
-      console.warn('Error fitting bounds, using fallback coordinates');
-      // Fallback to center of data or default coordinates
-      const center = bounds.getCenter();
-      if (center && !isNaN(center.lng) && !isNaN(center.lat)) {
-        map.setCenter([center.lng, center.lat]);
-        map.setZoom(13);
-      } else {
-        map.setCenter([-105.8717, 39.6403]); // A-Basin fallback
-        map.setZoom(13);
-      }
-    }
-  } else {
-    map.setCenter([-105.8717, 39.6403]); // A-Basin fallback
-    map.setZoom(13);
-  }
-};
 
 // Resort Selector Component
 const ResortSelector = ({ resorts, selectedResort, onResortChange }) => (
