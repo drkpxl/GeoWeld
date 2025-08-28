@@ -86,7 +86,7 @@ class OverpassClient:
         min_lon, min_lat, max_lon, max_lat = bounds
         
         query = f"""
-[out:json][timeout:30];
+[out:json][timeout:90];
 (
   // Forest features
   way["landuse"="forest"]({min_lat},{min_lon},{max_lat},{max_lon});

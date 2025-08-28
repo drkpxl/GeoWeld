@@ -21,7 +21,7 @@ MIN_TREES_PER_POLYGON = 1        # Minimum trees per polygon
 
 # Network and API configuration
 DEFAULT_OSM_BUFFER_DEGREES = 0.005   # ~500m buffer around boundaries for OSM data fetch
-DEFAULT_OSM_TIMEOUT = 30             # Timeout for OSM API requests in seconds
+DEFAULT_OSM_TIMEOUT = 90             # Timeout for OSM API requests in seconds
 DEFAULT_OSM_RETRY_DELAY = 5          # Delay between OSM API retries in seconds
 DEFAULT_OSM_MAX_RETRIES = 3          # Maximum number of OSM API retries
 
