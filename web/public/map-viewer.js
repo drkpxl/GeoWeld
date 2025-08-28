@@ -9,12 +9,29 @@ const { useNotifications } = window.NotificationSystem;
 const useMapbox = (mapboxToken, mapData, showMap, setSelectedFeature) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
+  const initTimeoutRef = useRef(null);
 
   useEffect(() => {
-    if (!showMap || !mapboxToken || !mapData || !mapContainer.current) return;
+    if (!showMap || !mapboxToken || !mapData || !mapContainer.current) {
+      return;
+    }
 
+    // Clear any existing timeout
+    if (initTimeoutRef.current) {
+      clearTimeout(initTimeoutRef.current);
+      initTimeoutRef.current = null;
+    }
+
+    // Clean up existing map safely
     if (map.current) {
-      map.current.remove();
+      try {
+        // Remove event listeners before destroying map
+        map.current.off();
+        map.current.remove();
+      } catch (error) {
+        console.warn('Error cleaning up previous map:', error);
+      }
+      map.current = null;
     }
 
     // Ensure container has proper dimensions before initializing map
@@ -24,52 +41,80 @@ const useMapbox = (mapboxToken, mapData, showMap, setSelectedFeature) => {
     container.style.width = '100%';
     
     // Small delay to ensure container is rendered with proper dimensions
-    const initTimeout = setTimeout(() => {
-      mapboxgl.accessToken = mapboxToken;
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/outdoors-v12',
-        center: [-72.908, 43.117],
-        zoom: 12
-      });
+    initTimeoutRef.current = setTimeout(() => {
+      try {
+        mapboxgl.accessToken = mapboxToken;
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/outdoors-v12',
+          center: [-72.908, 43.117],
+          zoom: 12
+        });
 
-      // Immediately resize after creation
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
-        }
-      }, 50);
-
-      map.current.on('load', () => {
-        // Force map resize to ensure proper container dimensions
+        // Immediately resize after creation
         setTimeout(() => {
           if (map.current) {
             map.current.resize();
           }
-        }, 100);
+        }, 50);
 
-        // Add data and layers
-        setupMapLayers(map.current, mapData);
-        setupMapInteractions(map.current, setSelectedFeature);
-        fitMapToBounds(map.current, mapData);
+        map.current.on('load', () => {
+          if (!map.current) return; // Check if map still exists
+          
+          // Force map resize to ensure proper container dimensions
+          setTimeout(() => {
+            if (map.current) {
+              map.current.resize();
+            }
+          }, 100);
+
+          // Add data and layers
+          try {
+            setupMapLayers(map.current, mapData);
+            setupMapInteractions(map.current, setSelectedFeature);
+            fitMapToBounds(map.current, mapData);
+          } catch (error) {
+            console.error('Error setting up map layers:', error);
+          }
+          
+          // Additional resize call after everything is loaded
+          setTimeout(() => {
+            if (map.current) {
+              map.current.resize();
+            }
+          }, 500);
+        });
         
-        // Additional resize call after everything is loaded
-        setTimeout(() => {
-          if (map.current) {
-            map.current.resize();
-          }
-        }, 500);
-      });
+        // Add error handler
+        map.current.on('error', (e) => {
+          console.error('Map error:', e.error);
+        });
 
-      return () => {
-        if (map.current) {
-          map.current.remove();
-          map.current = null;
-        }
-      };
+      } catch (error) {
+        console.error('Error initializing map:', error);
+      }
     }, 100);
 
-    return () => clearTimeout(initTimeout);
+    // Cleanup function
+    return () => {
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
+      }
+      
+      if (map.current) {
+        try {
+          // Remove all event listeners first
+          map.current.off();
+          // Then remove the map
+          map.current.remove();
+        } catch (error) {
+          console.warn('Error during map cleanup:', error);
+        } finally {
+          map.current = null;
+        }
+      }
+    };
   }, [showMap, mapData, mapboxToken, setSelectedFeature]);
 
   return { mapContainer, map };
@@ -205,33 +250,85 @@ const setupMapLayers = (map, mapData) => {
 
 // Map interaction setup
 const setupMapInteractions = (map, setSelectedFeature) => {
+  if (!map || !setSelectedFeature) {
+    console.warn('Map or setSelectedFeature not available for interaction setup');
+    return;
+  }
+
   const clickableLayers = ['boundaries', 'slow-zones', 'closed-areas', 'beginner-areas', 'forests', 'trees', 'rocks'];
   
   clickableLayers.forEach(layerId => {
-    map.on('click', layerId, (e) => {
-      try {
-        if (e.features && e.features.length > 0) {
-          const feature = e.features[0];
-          console.log('Feature clicked:', { layerId, feature, coordinates: e.lngLat });
-          setSelectedFeature({
-            ...feature,
-            layerId: layerId,
-            coordinates: e.lngLat
-          });
-        }
-      } catch (error) {
-        console.error('Error handling click:', error);
+    try {
+      // Check if layer exists before adding event listeners
+      if (!map.getLayer(layerId)) {
+        console.warn(`Layer ${layerId} not found, skipping interaction setup`);
+        return;
       }
-    });
 
-    // Change cursor on hover
-    map.on('mouseenter', layerId, () => {
-      map.getCanvas().style.cursor = 'pointer';
-    });
+      map.on('click', layerId, (e) => {
+        try {
+          // Additional safety checks
+          if (!e || !e.features || !e.lngLat || !setSelectedFeature) {
+            console.warn('Invalid click event data:', e);
+            return;
+          }
 
-    map.on('mouseleave', layerId, () => {
-      map.getCanvas().style.cursor = '';
-    });
+          if (e.features.length > 0) {
+            const feature = e.features[0];
+            
+            // Validate feature data before processing
+            if (!feature || !feature.properties) {
+              console.warn('Invalid feature data:', feature);
+              return;
+            }
+
+            console.log('Feature clicked:', { layerId, feature, coordinates: e.lngLat });
+            
+            // Create a safe copy of the feature data
+            const safeFeature = {
+              type: feature.type,
+              geometry: feature.geometry,
+              properties: { ...feature.properties },
+              layerId: layerId,
+              coordinates: {
+                lng: e.lngLat.lng,
+                lat: e.lngLat.lat
+              }
+            };
+
+            setSelectedFeature(safeFeature);
+          }
+        } catch (error) {
+          console.error('Error handling click for layer', layerId, ':', error);
+          // Don't re-throw the error to prevent app crash
+        }
+      });
+
+      // Change cursor on hover
+      map.on('mouseenter', layerId, () => {
+        try {
+          const canvas = map.getCanvas();
+          if (canvas) {
+            canvas.style.cursor = 'pointer';
+          }
+        } catch (error) {
+          console.warn('Error setting cursor on mouseenter:', error);
+        }
+      });
+
+      map.on('mouseleave', layerId, () => {
+        try {
+          const canvas = map.getCanvas();
+          if (canvas) {
+            canvas.style.cursor = '';
+          }
+        } catch (error) {
+          console.warn('Error resetting cursor on mouseleave:', error);
+        }
+      });
+    } catch (error) {
+      console.error(`Error setting up interactions for layer ${layerId}:`, error);
+    }
   });
 };
 

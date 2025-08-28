@@ -1,44 +1,8 @@
-stratton:
-  name: Stratton Mountain Resort
-  data_files:
-    boundaries: data/stratton/boundaries.geojson
-    osm_features: data/stratton/osm_features.geojson
-  default_tree_type: tree:mixed
-  tree_config:
-    min_area_for_trees: 5000
-    small_area_threshold: 25000
-    medium_area_threshold: 100000
-    large_area_threshold: 200000
-    trees_per_small_hectare: 5
-    trees_per_medium_hectare: 40
-    trees_per_large_hectare: 100
-    trees_per_extra_large_hectare: 300
-    max_trees_per_polygon: 300
-    min_trees_per_polygon: 1
-    random_seed: 42
 mammoth:
   name: Mammoth Resort
   data_files:
     boundaries: data/mammoth/boundaries.geojson
     osm_features: data/mammoth/osm_features.geojson
-  default_tree_type: tree:needle
-  tree_config:
-    min_area_for_trees: 5000
-    small_area_threshold: 25000
-    medium_area_threshold: 100000
-    large_area_threshold: 200000
-    trees_per_small_hectare: 5
-    trees_per_medium_hectare: 40
-    trees_per_large_hectare: 100
-    trees_per_extra_large_hectare: 300
-    max_trees_per_polygon: 300
-    min_trees_per_polygon: 1
-    random_seed: 42
-june:
-  name: June Resort
-  data_files:
-    boundaries: data/june/boundaries.geojson
-    osm_features: data/june/osm_features.geojson
   default_tree_type: tree:needle
   tree_config:
     min_area_for_trees: 5000
