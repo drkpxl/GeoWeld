@@ -19,8 +19,8 @@ from shapely.ops import unary_union
 from shapely import make_valid
 
 from .constants import (
-    SMALL_AREA_THRESHOLD, MEDIUM_AREA_THRESHOLD, LARGE_AREA_THRESHOLD,
-    DEFAULT_TREES_PER_SMALL_HECTARE, DEFAULT_TREES_PER_MEDIUM_HECTARE, DEFAULT_TREES_PER_LARGE_HECTARE,
+    SMALL_AREA_THRESHOLD, MEDIUM_AREA_THRESHOLD, LARGE_AREA_THRESHOLD, EXTRA_LARGE_AREA_THRESHOLD,
+    DEFAULT_TREES_PER_SMALL_HECTARE, DEFAULT_TREES_PER_MEDIUM_HECTARE, DEFAULT_TREES_PER_LARGE_HECTARE, DEFAULT_TREES_PER_EXTRA_LARGE_HECTARE,
     MAX_TREE_ATTEMPTS, DEFAULT_MAX_TREES_PER_POLYGON, MIN_TREES_PER_POLYGON,
     HECTARE_TO_SQ_METERS, DEFAULT_RANDOM_SEED, TIMESTAMP_FORMAT,
     DEFAULT_ZONE_STYLES, DEFAULT_OSM_BUFFER_DEGREES, DEFAULT_OSM_TIMEOUT,
@@ -90,9 +90,12 @@ class ResortProcessor:
         tree_config.setdefault('min_area_for_trees', SMALL_AREA_THRESHOLD)
         tree_config.setdefault('small_area_threshold', SMALL_AREA_THRESHOLD * 5)
         tree_config.setdefault('medium_area_threshold', MEDIUM_AREA_THRESHOLD * 4)
+        tree_config.setdefault('large_area_threshold', LARGE_AREA_THRESHOLD)
+        tree_config.setdefault('extra_large_area_threshold', EXTRA_LARGE_AREA_THRESHOLD)
         tree_config.setdefault('trees_per_small_hectare', DEFAULT_TREES_PER_SMALL_HECTARE)
         tree_config.setdefault('trees_per_medium_hectare', DEFAULT_TREES_PER_MEDIUM_HECTARE)
         tree_config.setdefault('trees_per_large_hectare', DEFAULT_TREES_PER_LARGE_HECTARE)
+        tree_config.setdefault('trees_per_extra_large_hectare', DEFAULT_TREES_PER_EXTRA_LARGE_HECTARE)
         tree_config.setdefault('max_trees_per_polygon', DEFAULT_MAX_TREES_PER_POLYGON)
         tree_config.setdefault('min_trees_per_polygon', MIN_TREES_PER_POLYGON)
         tree_config.setdefault('random_seed', DEFAULT_RANDOM_SEED)
@@ -236,6 +239,9 @@ class ResortProcessor:
         
         if tree_config['trees_per_large_hectare'] <= 0:
             raise ValidationError("trees_per_large_hectare must be positive")
+            
+        if tree_config['trees_per_extra_large_hectare'] <= 0:
+            raise ValidationError("trees_per_extra_large_hectare must be positive")
         
         # Check reasonable bounds
         if tree_config['max_trees_per_polygon'] > 1000:
@@ -458,8 +464,10 @@ class ResortProcessor:
             trees_per_hectare = tree_config['trees_per_small_hectare']
         elif area_sq_meters <= tree_config['medium_area_threshold']:
             trees_per_hectare = tree_config['trees_per_medium_hectare']
-        else:
+        elif area_sq_meters <= tree_config['large_area_threshold']:
             trees_per_hectare = tree_config['trees_per_large_hectare']
+        else:
+            trees_per_hectare = tree_config['trees_per_extra_large_hectare']
         
         tree_count = int(hectares * trees_per_hectare)
         
