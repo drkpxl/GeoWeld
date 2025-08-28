@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class OverpassClient:
     """Client for fetching OSM data from Overpass API."""
     
-    OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+    OVERPASS_URL = "https://overpass.private.coffee/api/interpreter"
     TIMEOUT = DEFAULT_OSM_TIMEOUT
     RETRY_DELAY = DEFAULT_OSM_RETRY_DELAY
     MAX_RETRIES = DEFAULT_OSM_MAX_RETRIES
