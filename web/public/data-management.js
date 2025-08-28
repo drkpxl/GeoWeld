@@ -5,40 +5,31 @@ const { handleFileUpload, loadConfig, updateConfig, loadConstants } = window.Api
 const { useProcessing } = window.Hooks;
 
 // Upload Tab Component
-const UploadTab = ({ 
-  resortName, 
-  setResortName, 
-  uploadError, 
-  setUploadError,
-  setSelectedResort,
-  loadResorts,
-  setConfig,
-  setActiveTab,
-  resorts 
-}) => {
+const UploadTab = ({ refreshData }) => {
+  const { state, actions } = window.AppState.useAppState();
   const fileInput = useRef(null);
 
   const handleFileUploadWrapper = async (e) => {
     const file = e.target.files[0];
     try {
-      setUploadError("");
-      const data = await handleFileUpload(file, resortName);
-      setSelectedResort(data.resort);
-      await loadResorts();
+      actions.setUploadError("");
+      const data = await handleFileUpload(file, state.resortName);
+      actions.setSelectedResortWithUrl(data.resort);
+      await refreshData();
       const configData = await loadConfig(data.resort);
-      setConfig(configData);
-      setActiveTab('configure');
+      actions.setConfig(configData);
+      actions.setActiveTabWithUrl('configure');
     } catch (err) {
-      setUploadError(err.message);
+      actions.setUploadError(err.message);
     }
   };
 
   const handleConfigureResort = async (resort) => {
     try {
-      setSelectedResort(resort);
+      actions.setSelectedResortWithUrl(resort);
       const configData = await loadConfig(resort);
-      setConfig(configData);
-      setActiveTab('configure');
+      actions.setConfig(configData);
+      actions.setActiveTabWithUrl('configure');
     } catch (err) {
       console.error("Error configuring resort:", err);
     }
@@ -64,8 +55,8 @@ const UploadTab = ({
             <input
               id="resort-name"
               type="text"
-              value={resortName}
-              onChange={(e) => setResortName(e.target.value)}
+              value={state.resortName}
+              onChange={(e) => actions.setResortName(e.target.value)}
               placeholder="Enter resort name (e.g., Stratton Mountain)"
               required
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -88,9 +79,9 @@ const UploadTab = ({
             />
           </div>
 
-          {uploadError && (
+          {state.uploadError && (
             <div role="alert" aria-live="polite" className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-600 dark:text-red-400 text-sm">{uploadError}</p>
+              <p className="text-red-600 dark:text-red-400 text-sm">{state.uploadError}</p>
             </div>
           )}
 
@@ -106,13 +97,13 @@ const UploadTab = ({
         </div>
       </Card>
 
-      {resorts.length > 0 && (
+      {state.resorts.length > 0 && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Existing Resorts
           </h3>
           <div className="space-y-2">
-            {resorts.map((resort) => (
+            {state.resorts.map((resort) => (
               <div key={resort} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                 <span className="font-medium text-gray-900 dark:text-white">{resort}</span>
                 <Button
@@ -131,23 +122,16 @@ const UploadTab = ({
 };
 
 // Configure Tab Component
-const ConfigureTab = ({ 
-  resorts, 
-  selectedResort, 
-  setSelectedResort, 
-  config, 
-  setConfig, 
-  setActiveTab,
-  loadOutputs
-}) => {
+const ConfigureTab = ({ loadOutputs }) => {
+  const { state, actions } = window.AppState.useAppState();
   const [configSaved, setConfigSaved] = useState(false);
   const [constants, setConstants] = useState(null);
   
   // Use shared processing hook
   const { processing, processOutput, processResort } = useProcessing(
-    selectedResort,
+    state.selectedResort,
     loadOutputs,
-    setActiveTab
+    (tab) => actions.setActiveTabWithUrl(tab)
   );
 
   // Load constants on component mount
@@ -165,7 +149,7 @@ const ConfigureTab = ({
 
   const handleUpdateConfig = async () => {
     try {
-      await updateConfig(selectedResort, config);
+      await updateConfig(state.selectedResort, state.config);
       setConfigSaved(true);
       // Don't show alert, just enable the process button
     } catch (err) {
@@ -175,12 +159,12 @@ const ConfigureTab = ({
 
   const handleResortChange = async (e) => {
     const resort = e.target.value;
-    setSelectedResort(resort);
+    actions.setSelectedResortWithUrl(resort);
     setConfigSaved(false); // Reset saved status when changing resorts
     if (resort) {
       try {
         const configData = await loadConfig(resort);
-        setConfig(configData);
+        actions.setConfig(configData);
       } catch (err) {
         console.error("Error loading config:", err);
       }
@@ -190,7 +174,7 @@ const ConfigureTab = ({
 
   // Reset config saved status when config changes
   const handleConfigChange = (newConfig) => {
-    setConfig(newConfig);
+    actions.setConfig(newConfig);
     setConfigSaved(false);
   };
 
@@ -213,25 +197,25 @@ const ConfigureTab = ({
             </label>
             <select
               id="config-resort"
-              value={selectedResort}
+              value={state.selectedResort}
               onChange={handleResortChange}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">Choose a resort...</option>
-              {resorts.map(resort => (
+              {state.resorts.map(resort => (
                 <option key={resort} value={resort}>{resort}</option>
               ))}
             </select>
           </div>
 
-          {selectedResort && config && (
+          {state.selectedResort && state.config && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="tree-type" className="block font-medium text-gray-900 dark:text-white mb-3">Tree Type</label>
                 <select
                   id="tree-type"
-                  value={config.default_tree_type}
-                  onChange={(e) => handleConfigChange({...config, default_tree_type: e.target.value})}
+                  value={state.config.default_tree_type}
+                  onChange={(e) => handleConfigChange({...state.config, default_tree_type: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="tree:mixed">Mixed Forest</option>
@@ -257,11 +241,11 @@ const ConfigureTab = ({
                     <input
                       id={`density-${key}`}
                       type="number"
-                      value={config.tree_config[key]}
+                      value={state.config.tree_config[key]}
                       onChange={(e) => handleConfigChange({
-                        ...config,
+                        ...state.config,
                         tree_config: {
-                          ...config.tree_config,
+                          ...state.config.tree_config,
                           [key]: parseInt(e.target.value)
                         }
                       })}
@@ -277,7 +261,7 @@ const ConfigureTab = ({
             </div>
           )}
 
-          {selectedResort && config && (
+          {state.selectedResort && state.config && (
             <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex space-x-4">

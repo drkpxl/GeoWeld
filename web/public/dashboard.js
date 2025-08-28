@@ -2,25 +2,18 @@
 const { Button, Card, InfoCard } = window.Components;
 const { loadConfig, loadMapData, deleteEntireResort } = window.ApiServices;
 const { useNotifications } = window.NotificationSystem;
+const { useAppState, createSelectors } = window.AppState;
 
-const Dashboard = ({ 
-  resorts, 
-  outputs, 
-  setActiveTab, 
-  setSelectedResort, 
-  setConfig,
-  setMapData,
-  setFeatureStats,
-  setShowMap,
-  refreshData
-}) => {
+const Dashboard = ({ refreshData }) => {
+  const { state, actions } = useAppState();
   const { showError, showSuccess } = useNotifications();
+  const selectors = createSelectors(state);
   const handleConfigureResort = async (resort) => {
     try {
-      setSelectedResort(resort);
+      actions.setSelectedResortWithUrl(resort);
       const configData = await loadConfig(resort);
-      setConfig(configData);
-      setActiveTab('configure');
+      actions.setConfig(configData);
+      actions.setActiveTabWithUrl('configure');
     } catch (err) {
       console.error("Error configuring resort:", err);
       showError("Failed to load resort configuration. Please try again.", "Configuration Error");
@@ -29,12 +22,12 @@ const Dashboard = ({
 
   const handleViewResort = async (resort) => {
     try {
-      setSelectedResort(resort);
+      actions.setSelectedResortWithUrl(resort);
       const mapData = await loadMapData(resort);
-      setMapData(mapData);
-      setFeatureStats(window.ApiServices.calculateFeatureStats(mapData));
-      setShowMap(true);
-      setActiveTab('view');
+      actions.setMapData(mapData);
+      actions.setFeatureStats(window.ApiServices.calculateFeatureStats(mapData));
+      actions.setShowMap(true);
+      actions.setActiveTabWithUrl('view');
     } catch (err) {
       console.error("Error loading map data:", err);
       showError("Failed to load map data. Please try again.", "Map Loading Error");
@@ -42,23 +35,9 @@ const Dashboard = ({
   };
 
   const handleDelete = async (resort, type, confirmMessage) => {
-    if (!confirm(`${confirmMessage}\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      if (type === 'entire') {
-        await deleteEntireResort(resort);
-      }
-      
-      // Show success message and refresh data
-      showSuccess(`Resort "${resort}" has been completely deleted.`, "Resort Deleted");
-      if (refreshData) {
-        refreshData();
-      }
-    } catch (err) {
-      console.error("Delete error:", err);
-      showError(`Failed to delete resort: ${err.message}`, "Delete Error");
+    const success = await actions.deleteResortAndCleanup(resort);
+    if (success && refreshData) {
+      refreshData();
     }
   };
 
@@ -76,21 +55,21 @@ const Dashboard = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <InfoCard
           title="Total Resorts"
-          value={resorts.length.toString()}
+          value={state.resorts.length.toString()}
           icon="⛰️"
         />
         <InfoCard
           title="Processed"
-          value={Object.keys(outputs).length.toString()}
+          value={Object.keys(state.outputs).length.toString()}
           icon="✅"
-          subtitle={`${resorts.length - Object.keys(outputs).length} pending`}
+          subtitle={`${state.resorts.length - Object.keys(state.outputs).length} pending`}
         />
         <InfoCard
           title="Map Viewer"
           value="Ready"
           icon="🗺️"
           subtitle="Maps available"
-          onClick={() => setActiveTab('view')}
+          onClick={() => actions.setActiveTabWithUrl('view')}
         />
         <InfoCard
           title="Processing"
@@ -105,9 +84,9 @@ const Dashboard = ({
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Available Resorts
           </h3>
-          {resorts.length > 0 ? (
+          {state.resorts.length > 0 ? (
             <div className="space-y-3">
-              {resorts.map((resort) => (
+              {state.resorts.map((resort) => (
                 <div key={resort} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-gray-900 dark:text-white text-lg">{resort}</span>
@@ -119,7 +98,7 @@ const Dashboard = ({
                       >
                         ⚙️ Configure
                       </Button>
-                      {outputs[resort] && (
+                      {state.outputs[resort] && (
                         <Button
                           size="sm"
                           onClick={() => handleViewResort(resort)}
@@ -127,7 +106,7 @@ const Dashboard = ({
                           🗺️ View Map
                         </Button>
                       )}
-                      {outputs[resort] && (
+                      {state.outputs[resort] && (
                         <Button
                           size="sm"
                           variant="success"

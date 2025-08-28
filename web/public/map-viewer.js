@@ -493,72 +493,38 @@ const InteractiveMap = ({ mapboxToken, mapData, selectedResort, featureStats, se
 };
 
 // Main MapViewer Component
-const MapViewer = ({ 
-  resorts,
-  selectedResort, 
-  setSelectedResort,
-  outputs,
-  mapboxToken,
-  mapData,
-  setMapData,
-  showMap,
-  setShowMap,
-  featureStats,
-  setFeatureStats,
-  selectedFeature,
-  setSelectedFeature,
-  refreshData
-}) => {
+const MapViewer = ({ refreshData }) => {
+  const { state, actions } = window.AppState.useAppState();
   const { showError, showSuccess } = useNotifications();
-  const [loadingMap, setLoadingMap] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const handleResortSelection = async (e) => {
     const resort = e.target.value;
-    setSelectedResort(resort);
+    actions.setSelectedResortWithUrl(resort);
     if (resort) {
-      setLoadingMap(true);
+      actions.setLoadingMap(true);
       try {
         const data = await loadMapData(resort);
-        setMapData(data);
-        setFeatureStats(calculateFeatureStats(data));
-        setShowMap(true);
+        actions.setMapData(data);
+        actions.setFeatureStats(calculateFeatureStats(data));
+        actions.setShowMap(true);
       } catch (err) {
         console.error("Error loading map data:", err);
         showError("Failed to load map data. Please try again.", "Map Loading Error");
       } finally {
-        setLoadingMap(false);
+        actions.setLoadingMap(false);
       }
     }
   };
 
   const handleDelete = async (type, confirmMessage) => {
-    if (!selectedResort || deleting) return;
-    
-    if (!confirm(`${confirmMessage}\n\nThis action cannot be undone.`)) {
-      return;
-    }
-
-    setDeleting(true);
-    try {
-      if (type === 'entire') {
-        await deleteEntireResort(selectedResort);
-        // Clear all data if entire resort is deleted
-        setMapData(null);
-        setFeatureStats(null);
-        setShowMap(false);
-        setSelectedResort('');
-        showSuccess(`Resort "${selectedResort}" has been completely deleted.`, "Resort Deleted");
-      }
-      
+    const success = await actions.deleteResortAndCleanup(state.selectedResort);
+    if (success) {
+      showSuccess(`Resort "${state.selectedResort}" has been completely deleted.`, "Resort Deleted");
       if (refreshData) {
         refreshData();
       }
-    } catch (err) {
-      console.error("Delete error:", err);
-      showError(`Failed to delete resort: ${err.message}`, "Delete Error");
-    } finally {
-      setDeleting(false);
+    } else if (state.selectedResort) {
+      showError("Failed to delete resort. Please try again.", "Delete Error");
     }
   };
 
@@ -575,36 +541,36 @@ const MapViewer = ({
         </div>
         
         <div className="flex items-center space-x-4">
-          {loadingMap && <LoadingSpinner size="sm" />}
+          {state.loadingMap && <LoadingSpinner size="sm" />}
           <ResortSelector 
-            resorts={resorts}
-            selectedResort={selectedResort}
+            resorts={state.resorts}
+            selectedResort={state.selectedResort}
             onResortChange={handleResortSelection}
           />
         </div>
       </div>
 
-      {selectedResort && (
+      {state.selectedResort && (
         <FileManagement 
-          selectedResort={selectedResort}
-          outputs={outputs}
+          selectedResort={state.selectedResort}
+          outputs={state.outputs}
           onDelete={handleDelete}
-          deleting={deleting}
+          deleting={state.deletingResort}
         />
       )}
 
-      {featureStats && (
-        <FeatureStatistics featureStats={featureStats} />
+      {state.featureStats && (
+        <FeatureStatistics featureStats={state.featureStats} />
       )}
 
-      {mapData && (
+      {state.mapData && (
         <InteractiveMap 
-          mapboxToken={mapboxToken}
-          mapData={mapData}
-          selectedResort={selectedResort}
-          featureStats={featureStats}
-          selectedFeature={selectedFeature}
-          setSelectedFeature={setSelectedFeature}
+          mapboxToken={state.mapboxToken}
+          mapData={state.mapData}
+          selectedResort={state.selectedResort}
+          featureStats={state.featureStats}
+          selectedFeature={state.selectedFeature}
+          setSelectedFeature={actions.setSelectedFeature}
         />
       )}
     </div>
