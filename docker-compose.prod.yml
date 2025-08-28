@@ -8,6 +8,8 @@ services:
       - NODE_ENV=production
       - PORT=4011
       - MAPBOX_TOKEN=${MAPBOX_TOKEN}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
       # Mount data and output directories for persistence
       - ./data:/app/data
