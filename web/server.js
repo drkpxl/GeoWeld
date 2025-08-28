@@ -175,7 +175,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
           min_area_for_trees: 5000,
           small_area_threshold: 25000,
           medium_area_threshold: 100000,
-          large_area_threshold: 500000,
+          large_area_threshold: 300000,
           trees_per_small_hectare: 5,
           trees_per_medium_hectare: 40,
           trees_per_large_hectare: 100,
