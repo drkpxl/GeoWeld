@@ -3,7 +3,7 @@ Constants for GeoJSON processing
 """
 
 # Area thresholds (square meters)
-SMALL_AREA_THRESHOLD = 100      # 0.01 hectares
+SMALL_AREA_THRESHOLD = 1      # 0.0001 hectares
 MEDIUM_AREA_THRESHOLD = 20000    # 2.5 hectares
 LARGE_AREA_THRESHOLD = 100000    # 10 hectares
 EXTRA_LARGE_AREA_THRESHOLD = 200000  # 20 hectares
