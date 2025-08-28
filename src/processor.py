@@ -313,6 +313,19 @@ class ResortProcessor:
         
         boundaries_gdf = gpd.read_file(boundaries_file)
         
+        # Check for None/null ZoneType values before normalization
+        null_zone_mask = boundaries_gdf['ZoneType'].isna()
+        if null_zone_mask.any():
+            null_count = null_zone_mask.sum()
+            null_indices = boundaries_gdf[null_zone_mask].index.tolist()
+            error_msg = (
+                f"\n❌ Data Quality Error: Found {null_count} features with missing ZoneType values\n"
+                f"   Feature indices with null ZoneType: {null_indices}\n"
+                f"   All boundary features must have a valid ZoneType property.\n"
+                f"   Please check your boundaries.geojson file and ensure all features have ZoneType set."
+            )
+            raise ValueError(error_msg)
+        
         # Normalize ZoneType values (handle case and spacing variations)
         boundaries_gdf['ZoneType'] = boundaries_gdf['ZoneType'].str.lower().str.replace(' ', '_')
         
