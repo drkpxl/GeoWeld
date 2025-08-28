@@ -257,6 +257,7 @@ const ConfigureTab = ({
                   'Trees per Small Hectare': 'trees_per_small_hectare',
                   'Trees per Medium Hectare': 'trees_per_medium_hectare',
                   'Trees per Large Hectare': 'trees_per_large_hectare',
+                  'Trees per Extra Large Hectare': 'trees_per_extra_large_hectare',
                   'Max Trees per Polygon': 'max_trees_per_polygon'
                 }).map(([label, key]) => (
                   <div key={key}>
